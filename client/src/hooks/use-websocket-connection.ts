@@ -13,7 +13,7 @@ interface UseWebSocketOptions {
   onError?: (error: Event) => void;
 }
 
-interface UseWebSocketReturn {
+export interface UseWebSocketReturn {
   status: ConnectionStatus;
   connect: () => void;
   disconnect: () => void;
@@ -24,14 +24,14 @@ interface UseWebSocketReturn {
 
 /**
  * Hook for managing WebSocket connections
- * @param sessionId - Session ID for the WebSocket connection path
+ * @param sessionIdParam - Session ID for the WebSocket connection path
  * @param options - Configuration options
  */
-export function useWebSocket(
-  sessionId: string | undefined,
+export function useWebSocketConnection(
+  sessionIdParam: string | undefined,
   options: UseWebSocketOptions = {}
 ): UseWebSocketReturn {
-  const actualSessionId = sessionId || '';
+  const sessionId = sessionIdParam || '';
   const {
     autoConnect = true,
     reconnectInterval = 3000,
@@ -70,7 +70,7 @@ export function useWebSocket(
 
   // Create WebSocket connection
   const connect = useCallback(() => {
-    if (!actualSessionId) return;
+    if (!sessionId) return;
     
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
@@ -82,7 +82,7 @@ export function useWebSocket(
     try {
       // Build WebSocket URL with correct protocol
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${actualSessionId}`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${sessionId}`;
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -95,7 +95,7 @@ export function useWebSocket(
         // Send an initial message to identify this connection
         ws.send(JSON.stringify({
           type: 'identify',
-          sessionId: actualSessionId
+          sessionId
         }));
         
         if (onOpen) onOpen();
@@ -140,7 +140,7 @@ export function useWebSocket(
       setStatus('error');
       console.error('WebSocket connection error:', err);
     }
-  }, [actualSessionId, cleanupWebSocket, onOpen, onClose, onMessage, onError, maxReconnectAttempts, reconnectInterval]);
+  }, [sessionId, cleanupWebSocket, onOpen, onClose, onMessage, onError, maxReconnectAttempts, reconnectInterval]);
 
   // Send message through WebSocket
   const sendMessage = useCallback((message: any): boolean => {
@@ -168,14 +168,14 @@ export function useWebSocket(
 
   // Auto-connect on mount or when sessionId changes
   useEffect(() => {
-    if (autoConnect && actualSessionId) {
+    if (autoConnect && sessionId) {
       connect();
     }
 
     return () => {
       cleanupWebSocket();
     };
-  }, [actualSessionId, autoConnect, connect, cleanupWebSocket]);
+  }, [sessionId, autoConnect, connect, cleanupWebSocket]);
 
   return {
     status,

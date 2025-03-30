@@ -7,22 +7,25 @@ import HumanChat from '@/components/human-chat';
 import ConnectAIModal from '@/components/connect-ai-modal';
 import ShareSessionModal from '@/components/share-session-modal';
 import ExportPersonalityModal from '@/components/export-personality-modal';
+import DirectConnectionModal from '@/components/direct-connection-modal';
 import { useSession } from '@/hooks/use-session';
-import { useWebSocket } from '@/hooks/use-websocket';
+import { useWebSocketConnection } from '@/hooks/use-websocket-connection';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Users, 
-  Link, 
+  Link as LinkIcon, 
   Settings, 
   Plus,
   Menu,
-  X
+  X,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UserAvatar from '@/components/user-avatar';
 
 export default function Project() {
   const { id: projectId } = useParams();
+  const projectIdStr = projectId || '';
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   
@@ -40,11 +43,11 @@ export default function Project() {
     sendMessage
   } = useSession({
     autoJoin: true,
-    sessionId: projects[projectId]?.sessionId
+    sessionId: projectId && projects[projectId] ? projects[projectId].sessionId : undefined
   });
   
   // WebSocket connection for real-time updates
-  const { status: wsStatus, sendMessage: wsSendMessage } = useWebSocket(
+  const { status: wsStatus, sendMessage: wsSendMessage } = useWebSocketConnection(
     session?.sessionId,
     {
       onMessage: (data) => {
@@ -66,6 +69,8 @@ export default function Project() {
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isDirectConnectionModalOpen, setIsDirectConnectionModalOpen] = useState(false);
+  const [connectedPeers, setConnectedPeers] = useState<{id: string, name: string}[]>([]);
   
   // Connected AIs in this session
   const connectedAIs = participants.filter(p => p.type === 'ai');
@@ -172,8 +177,15 @@ export default function Project() {
               className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
               onClick={() => setIsShareModalOpen(true)}
             >
-              <Link className="h-4 w-4 mr-1.5" />
+              <LinkIcon className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Share</span>
+            </button>
+            <button 
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
+              onClick={() => setIsDirectConnectionModalOpen(true)}
+            >
+              <Network className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Direct Connect</span>
             </button>
             <button 
               className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
@@ -197,7 +209,7 @@ export default function Project() {
           {/* AI Conversation Pane */}
           <AIChat 
             messages={messages} 
-            projectId={projectId} 
+            projectId={projectIdStr} 
             onSendMessage={handleSendAIMessage}
             connectedAIs={connectedAIs}
           />
@@ -215,21 +227,38 @@ export default function Project() {
       <ConnectAIModal 
         isOpen={isConnectModalOpen}
         onClose={() => setIsConnectModalOpen(false)}
-        projectId={projectId}
+        projectId={projectIdStr}
       />
       
       {/* Share Session Modal */}
       <ShareSessionModal 
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        projectId={projectId}
+        projectId={projectIdStr}
       />
       
       {/* Export Personality Modal */}
       <ExportPersonalityModal 
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        projectId={projectId}
+        projectId={projectIdStr}
+      />
+      
+      {/* Direct Connection Modal */}
+      <DirectConnectionModal
+        isOpen={isDirectConnectionModalOpen}
+        onClose={() => setIsDirectConnectionModalOpen(false)}
+        projectId={projectIdStr}
+        onConnectionEstablished={(peerId, peerName) => {
+          // Add to connected peers
+          setConnectedPeers(prev => [...prev, { id: peerId, name: peerName }]);
+          
+          // Notify the user
+          toast({
+            title: "Direct Connection Established",
+            description: `Connected with ${peerName}. AI-to-AI conversation is now possible.`
+          });
+        }}
       />
     </div>
   );
