@@ -13,14 +13,18 @@ export interface UseOpenAIOptions {
   onError?: (error: Error) => void;
 }
 
+// Define a consistent options interface for completion requests
+interface CompletionOptions {
+  temperature?: number;
+  maxTokens?: number;
+  onError?: (error: Error) => void;
+}
+
 export interface UseOpenAIReturn {
   isLoading: boolean;
   error: Error | null;
   client: OpenAIClient | null;
-  generateCompletion: (messages: OpenAIMessage[], options?: {
-    temperature?: number,
-    maxTokens?: number,
-  }) => Promise<string>;
+  generateCompletion: (messages: OpenAIMessage[], options?: CompletionOptions) => Promise<string>;
   setApiKey: (key: string) => void;
   setModel: (model: string) => void;
   hasApiKey: boolean;
@@ -31,12 +35,12 @@ export interface UseOpenAIReturn {
 /**
  * A hook for interacting with the OpenAI API
  */
-export const useOpenAI = (options: UseOpenAIOptions = {}): UseOpenAIReturn => {
+export const useOpenAI = (hookOptions: UseOpenAIOptions = {}): UseOpenAIReturn => {
   const [client, setClient] = useState<OpenAIClient | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(options.apiKey || null);
-  const [model, setModel] = useState<string>(options.model || 'gpt-4o');
+  const [apiKey, setApiKey] = useState<string | null>(hookOptions.apiKey || null);
+  const [model, setModel] = useState<string>(hookOptions.model || 'gpt-4o');
   
   // Set the API key
   const handleSetApiKey = useCallback((key: string) => {
@@ -67,19 +71,16 @@ export const useOpenAI = (options: UseOpenAIOptions = {}): UseOpenAIReturn => {
       setClient(null);
       setError(err instanceof Error ? err : new Error('Unknown error initializing OpenAI client'));
       
-      if (options.onError) {
-        options.onError(err instanceof Error ? err : new Error('Unknown error initializing OpenAI client'));
+      if (hookOptions.onError) {
+        hookOptions.onError(err instanceof Error ? err : new Error('Unknown error initializing OpenAI client'));
       }
     }
-  }, [apiKey, model, options.onError]);
+  }, [apiKey, model, hookOptions.onError]);
   
   // Generate a completion from the OpenAI API
   const generateCompletion = useCallback(async (
     messages: OpenAIMessage[],
-    options: {
-      temperature?: number,
-      maxTokens?: number,
-    } = {}
+    completionOptions: CompletionOptions = {}
   ): Promise<string> => {
     if (!client) {
       throw new Error('OpenAI client not initialized. Set an API key first.');
@@ -91,8 +92,8 @@ export const useOpenAI = (options: UseOpenAIOptions = {}): UseOpenAIReturn => {
     try {
       const result = await client.createChatCompletion(
         messages,
-        options.temperature,
-        options.maxTokens
+        completionOptions.temperature,
+        completionOptions.maxTokens
       );
       
       return result;
@@ -101,23 +102,20 @@ export const useOpenAI = (options: UseOpenAIOptions = {}): UseOpenAIReturn => {
       const error = err instanceof Error ? err : new Error('Unknown error generating completion');
       setError(error);
       
-      // Pass error to the parent onError handler if provided
-      if (options.onError) {
-        // This can't be called because options.onError doesn't exist on this type
-        // We'll use the parent onError handler from the hook options instead
-        if (options.onError) {}
-      }
-      
-      // Use the handler from hook options
-      if (options.onError && typeof options.onError === 'function') {
-        options.onError(error);
+      // Call the error handler if provided in completion options
+      if (completionOptions.onError) {
+        completionOptions.onError(error);
+      } 
+      // Fall back to the global error handler
+      else if (hookOptions.onError) {
+        hookOptions.onError(error);
       }
       
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [client, options.onError]);
+  }, [client, hookOptions.onError]);
   
   return {
     isLoading,

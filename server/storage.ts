@@ -225,12 +225,15 @@ export class MemStorage implements IStorage {
     const id = uuidv4();
     const timestamp = new Date();
     
+    // Create the new message with proper default values for required fields
     const newMessage: Message = {
-      ...message,
       id,
+      projectId: message.projectId,
+      senderId: message.senderId,
+      content: message.content,
       timestamp,
-      // Ensure required fields have default values
-      metadata: message.metadata || null
+      type: message.type,
+      metadata: message.metadata !== undefined ? message.metadata : null
     };
     
     const projectMessages = this.messages.get(message.projectId) || [];
