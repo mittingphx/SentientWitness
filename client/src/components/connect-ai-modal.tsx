@@ -1,21 +1,9 @@
-import { useState } from 'react';
-import { useStore } from '@/lib/store';
-import { useOpenAI } from '@/hooks/use-openai';
+import { useState, useEffect, useCallback } from 'react';
+import { useOpenAI } from '../hooks/use-openai';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
-import { SessionUser } from '@shared/schema';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose
-} from '@/components/ui/dialog';
+import { OPENAI_MODELS } from '../lib/openai';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -24,7 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { 
+  Bot,
+  Key,
+  Loader2,
+  Link,
+  Brain,
+  PlugZap,
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
+import { SessionUser } from '../shared/schema';
 
 interface ConnectAIModalProps {
   isOpen: boolean;
@@ -34,213 +38,210 @@ interface ConnectAIModalProps {
 }
 
 export default function ConnectAIModal({ isOpen, onClose, projectId, onAddAI }: ConnectAIModalProps) {
-  const [aiService, setAIService] = useState('openai');
-  const [aiName, setAIName] = useState('');
-  const [connectionMethod, setConnectionMethod] = useState('extension');
-  const [personalityProfile, setPersonalityProfile] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gpt-4o');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
   const { toast } = useToast();
-  const { addUser, updateProject, projects } = useStore();
-  const { connectWithApiKey, availableModels } = useOpenAI({
+  
+  // AI connection state
+  const [aiName, setAiName] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
+  const [personalityPrompt, setPersonalityPrompt] = useState<string>('');
+  const [connecting, setConnecting] = useState<boolean>(false);
+  
+  // Setup OpenAI
+  const openai = useOpenAI({
+    model: selectedModel,
     onError: (error) => {
+      console.error('OpenAI error:', error);
       toast({
-        title: "Connection Error",
+        title: 'API Error',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive'
       });
-      setIsSubmitting(false);
+      setConnecting(false);
     }
   });
-
-  const handleConnect = async () => {
-    if (!aiName) {
+  
+  // Reset the form when the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setAiName('');
+      setSelectedModel('gpt-4o');
+      setPersonalityPrompt('');
+      setConnecting(false);
+    }
+  }, [isOpen]);
+  
+  // Handle connecting to the AI
+  const handleConnectAI = useCallback(async () => {
+    if (!aiName.trim()) {
       toast({
-        title: "Missing Information",
-        description: "Please provide a name for your AI assistant",
-        variant: "destructive"
+        title: 'Name Required',
+        description: 'Please enter a name for your AI',
+        variant: 'destructive'
       });
       return;
     }
-
-    setIsSubmitting(true);
-
+    
+    if (!openai.hasApiKey) {
+      toast({
+        title: 'API Key Required',
+        description: 'Please enter your OpenAI API key',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setConnecting(true);
+    
     try {
-      // If using API key, validate it first
-      if (connectionMethod === 'api-key') {
-        if (!apiKey) {
-          throw new Error('API key is required');
-        }
-        
-        const connected = await connectWithApiKey(apiKey, selectedModel);
-        if (!connected) {
-          throw new Error('Failed to connect with the provided API key');
-        }
-      }
-
-      // Create an AI user
+      // Test the API connection with a simple request
+      const testResponse = await openai.generateCompletion([
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: 'Say hello!' }
+      ]);
+      
+      console.log('Test response:', testResponse);
+      
+      // If we get here, the connection was successful
+      toast({
+        title: 'Connected',
+        description: `Successfully connected to ${aiName} using ${selectedModel}`,
+        variant: 'default'
+      });
+      
+      // Create a SessionUser object for the AI
       const aiUser: SessionUser = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         displayName: aiName,
+        color: getRandomColor(),
         type: 'ai',
         aiModel: selectedModel,
-        color: getRandomColor(),
         isActive: true
       };
-
-      // Add AI to user store
-      addUser(aiUser);
-
-      // Add AI to project participants
-      const project = projects[projectId];
-      if (project) {
-        updateProject(projectId, {
-          participants: [...project.participants, aiUser]
-        });
-      }
-
-      // Call onAddAI callback if provided
+      
+      // Call the onAddAI callback
       if (onAddAI) {
         onAddAI(aiUser);
       }
-
-      toast({
-        title: "AI Connected",
-        description: `${aiName} has been added to your project`,
-      });
-
-      // Reset form and close modal
-      resetForm();
+      
+      // Close the modal
       onClose();
     } catch (error) {
+      console.error('Error connecting to AI:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to connect AI",
-        variant: "destructive"
+        title: 'Connection Error',
+        description: error instanceof Error ? error.message : 'Unknown error connecting to AI',
+        variant: 'destructive'
       });
     } finally {
-      setIsSubmitting(false);
+      setConnecting(false);
     }
-  };
-
-  const resetForm = () => {
-    setAIService('openai');
-    setAIName('');
-    setConnectionMethod('extension');
-    setPersonalityProfile('');
-    setApiKey('');
-    setSelectedModel('gpt-4o');
-  };
-
+  }, [aiName, onAddAI, onClose, openai, selectedModel, toast]);
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Connect Your AI Assistant</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            Connect AI Assistant
+          </DialogTitle>
           <DialogDescription>
-            Add an AI assistant to join the conversation. Your credentials are never stored on our servers.
+            Connect to an AI assistant using your OpenAI API key
           </DialogDescription>
         </DialogHeader>
-
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="ai-service">Select AI Service</Label>
-            <Select value={aiService} onValueChange={setAIService}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select AI Service" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
-                <SelectItem value="anthropic" disabled>Anthropic (Claude)</SelectItem>
-                <SelectItem value="meta" disabled>Meta (Llama)</SelectItem>
-                <SelectItem value="other" disabled>Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {aiService === 'openai' && (
-            <div className="grid gap-2">
-              <Label htmlFor="model">Select Model</Label>
+        
+        <div className="space-y-4">
+          {/* API Key Input */}
+          {!openai.hasApiKey && (
+            <div className="space-y-2">
+              <Label htmlFor="api-key" className="flex items-center gap-1.5">
+                <Key className="h-4 w-4" />
+                OpenAI API Key
+              </Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={openai.hasApiKey ? '••••••••' : ''}
+                onChange={(e) => openai.setApiKey(e.target.value)}
+                placeholder="Enter your OpenAI API key"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your API key is only used in your browser and never stored on our servers.
+              </p>
+            </div>
+          )}
+          
+          {/* AI Configuration */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="ai-name" className="flex items-center gap-1.5">
+                <Bot className="h-4 w-4" />
+                AI Name
+              </Label>
+              <Input
+                id="ai-name"
+                value={aiName}
+                onChange={(e) => setAiName(e.target.value)}
+                placeholder="Enter a name for your AI assistant"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="ai-model" className="flex items-center gap-1.5">
+                <Brain className="h-4 w-4" />
+                AI Model
+              </Label>
               <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Model" />
+                <SelectTrigger id="ai-model">
+                  <SelectValue placeholder="Select a model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableModels.map(model => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.name}
+                  {OPENAI_MODELS.map((model) => (
+                    <SelectItem key={model} value={model}>
+                      {model}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-
-          <div className="grid gap-2">
-            <Label htmlFor="ai-name">AI Profile Name</Label>
-            <Input
-              id="ai-name"
-              placeholder="E.g., My GPT-4 Assistant"
-              value={aiName}
-              onChange={(e) => setAIName(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Connection Method</Label>
-            <RadioGroup value={connectionMethod} onValueChange={setConnectionMethod}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="extension" id="extension" />
-                <Label htmlFor="extension" className="font-normal">Connect via browser extension (recommended)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="api-key" id="api-key" />
-                <Label htmlFor="api-key" className="font-normal">Connect with API key</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {connectionMethod === 'api-key' && (
-            <div className="grid gap-2">
-              <Label htmlFor="api-key-input">API Key</Label>
-              <Input
-                id="api-key-input"
-                type="password"
-                placeholder="Enter your API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Your API key is only stored in your browser and never sent to our servers.
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedModel === 'gpt-4o' && 'GPT-4o is the newest and most capable model'}
+                {selectedModel === 'gpt-4-turbo' && 'GPT-4 Turbo is fast and cost-effective'}
+                {selectedModel === 'gpt-4' && 'GPT-4 is the previous generation model'}
+                {selectedModel === 'gpt-3.5-turbo' && 'GPT-3.5 Turbo is faster but less capable'}
               </p>
             </div>
-          )}
-
-          <div className="grid gap-2">
-            <Label htmlFor="personality">Initial Personality Profile</Label>
-            <Textarea
-              id="personality"
-              placeholder="Optional: Add any specific personality traits, knowledge areas, or behavior patterns you want your AI to exhibit..."
-              className="h-24"
-              value={personalityProfile}
-              onChange={(e) => setPersonalityProfile(e.target.value)}
-            />
+          </div>
+          
+          {/* Personality Note */}
+          <div className="bg-muted/50 rounded-md p-3 text-sm flex items-start gap-2">
+            <PlugZap className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Customize AI Personality</p>
+              <p className="text-muted-foreground mt-1">
+                You can attach a custom personality to your AI after connecting. Click "Connect" to get started.
+              </p>
+            </div>
           </div>
         </div>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="secondary">
-              Cancel
-            </Button>
-          </DialogClose>
+        
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={onClose} className="sm:flex-1">Cancel</Button>
           <Button 
-            onClick={handleConnect}
-            disabled={isSubmitting || !aiName}
+            onClick={handleConnectAI}
+            disabled={connecting || !aiName.trim() || !openai.hasApiKey}
+            className="sm:flex-1"
           >
-            {isSubmitting ? "Connecting..." : "Connect AI Assistant"}
+            {connecting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Link className="h-4 w-4 mr-2" />
+                Connect
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -248,11 +249,24 @@ export default function ConnectAIModal({ isOpen, onClose, projectId, onAddAI }: 
   );
 }
 
-// Helper function to generate random colors
+// Helper function to generate a random color
 function getRandomColor(): string {
   const colors = [
-    'purple-500', 'green-500', 'indigo-500', 'teal-500', 'amber-500',
-    'pink-500', 'cyan-500', 'lime-500', 'orange-500', 'sky-500'
+    '#f44336', // Red
+    '#e91e63', // Pink
+    '#9c27b0', // Purple
+    '#673ab7', // Deep Purple
+    '#3f51b5', // Indigo
+    '#2196f3', // Blue
+    '#03a9f4', // Light Blue
+    '#00bcd4', // Cyan
+    '#009688', // Teal
+    '#4caf50', // Green
+    '#8bc34a', // Light Green
+    '#ffc107', // Amber
+    '#ff9800', // Orange
+    '#ff5722', // Deep Orange
   ];
+  
   return colors[Math.floor(Math.random() * colors.length)];
 }

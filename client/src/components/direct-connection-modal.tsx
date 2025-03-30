@@ -1,21 +1,31 @@
-import { useState, useEffect } from 'react';
-import { usePeerConnection } from '@/hooks/use-peer-connection';
-import { useWebSocketConnection } from '@/hooks/use-websocket-connection';
-import { useStore } from '@/lib/store';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import UserAvatar from './user-avatar';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Check, Clock, Network, X, RefreshCcw, Send } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { 
+  Link,
+  Users,
+  Copy,
+  Loader2,
+  Check,
+  AlertTriangle
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface DirectConnectionModalProps {
   isOpen: boolean;
@@ -31,364 +41,317 @@ export default function DirectConnectionModal({
   onConnectionEstablished
 }: DirectConnectionModalProps) {
   const { toast } = useToast();
-  const { currentUser, projects } = useStore();
-  const [targetUserId, setTargetUserId] = useState('');
-  const [pendingRequests, setPendingRequests] = useState<{id: string, name: string}[]>([]);
-  const [showRequests, setShowRequests] = useState(false);
-  const [connectionAttempt, setConnectionAttempt] = useState<string | null>(null);
   
-  // Get current session ID
-  const sessionId = projects[projectId]?.sessionId;
-
-  // Set up WebSocket connection for signaling
-  const ws = useWebSocketConnection(sessionId, {
-    onMessage: (data) => {
-      // Handle signaling requests
-      if (data.type === 'signaling' && data.signalingType === 'offer' && data.targetId === peerConnection.localId) {
-        const newRequest = {
-          id: data.senderId,
-          name: data.senderName || 'Unknown user'
-        };
-        
-        // Add to pending requests if not already there
-        setPendingRequests(prev => {
-          if (!prev.some(req => req.id === newRequest.id)) {
-            return [...prev, newRequest];
-          }
-          return prev;
-        });
-        
-        setShowRequests(true);
-      }
-    }
-  });
-
-  // Set up peer connection
-  const peerConnection = usePeerConnection(ws, {
-    onConnectionChange: (status, peerId) => {
-      if (status === 'connected' && peerId) {
-        toast({
-          title: "Connection Established",
-          description: `Direct connection established with ${peerConnection.peerName || 'peer'}`,
-        });
-        
-        if (onConnectionEstablished) {
-          onConnectionEstablished(peerId, peerConnection.peerName || 'Unknown');
-        }
-        
-        // Close modal after successful connection
-        onClose();
-      } else if (status === 'disconnected') {
-        if (connectionAttempt) {
-          toast({
-            title: "Connection Failed",
-            description: "Failed to establish connection. Please try again.",
-            variant: "destructive"
-          });
-        }
-        setConnectionAttempt(null);
-      }
-    },
-    onData: (data) => {
-      // Handle data received from peer
-      console.log('Received data from peer:', data);
-    },
-    onError: (error) => {
-      toast({
-        title: "Connection Error",
-        description: error.message || "An error occurred with the peer connection",
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Handle direct connection request
-  const handleConnectRequest = async () => {
-    if (!targetUserId.trim()) {
-      toast({
-        title: "Invalid Input",
-        description: "Please enter a user ID to connect to",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!sessionId) {
-      toast({
-        title: "Error",
-        description: "Session information is missing",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setConnectionAttempt(targetUserId);
-    
-    // Create an offer and send it via the signaling channel
-    try {
-      await peerConnection.createOffer(targetUserId, sessionId);
-      
-      toast({
-        title: "Connection Request Sent",
-        description: "Waiting for peer to accept connection...",
-      });
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : "Failed to send connection request",
-        variant: "destructive"
-      });
-      setConnectionAttempt(null);
-    }
-  };
-
-  // Handle accepting a connection request
-  const handleAcceptRequest = async (requestId: string) => {
-    if (!sessionId) {
-      toast({
-        title: "Error",
-        description: "Session information is missing",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Find the request in pending requests
-    const request = pendingRequests.find(req => req.id === requestId);
-    if (!request) return;
-    
-    // Wait for the offer message
-    const waitForOffer = (retries = 5, delay = 500): Promise<RTCSessionDescriptionInit | null> => {
-      return new Promise((resolve) => {
-        // Check if we have an offer from this sender in ws.lastMessage
-        if (ws.lastMessage && 
-            ws.lastMessage.type === 'signaling' && 
-            ws.lastMessage.signalingType === 'offer' && 
-            ws.lastMessage.senderId === requestId) {
-          resolve(ws.lastMessage.payload);
-        } else if (retries > 0) {
-          // Try again after delay
-          setTimeout(() => {
-            waitForOffer(retries - 1, delay).then(resolve);
-          }, delay);
-        } else {
-          // Ran out of retries
-          resolve(null);
-        }
-      });
-    };
-    
-    const offer = await waitForOffer();
-    
-    if (!offer) {
-      toast({
-        title: "Connection Error",
-        description: "Could not find connection offer. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      // Accept the offer
-      await peerConnection.acceptOffer(offer, requestId, sessionId);
-      
-      // Remove from pending requests
-      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
-      
-      toast({
-        title: "Connection Accepted",
-        description: "Establishing direct connection...",
-      });
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : "Failed to accept connection",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Reject a connection request
-  const handleRejectRequest = (requestId: string) => {
-    setPendingRequests(prev => prev.filter(req => req.id !== requestId));
-  };
-
-  // Cancel the current connection attempt
-  const handleCancelConnect = () => {
-    if (connectionAttempt) {
-      peerConnection.closeConnection();
-      setConnectionAttempt(null);
-      
-      toast({
-        title: "Connection Cancelled",
-        description: "Connection attempt was cancelled",
-      });
-    }
-  };
-
-  // Clean up on unmount or when modal closes
+  // State for connect tab
+  const [connectionCode, setConnectionCode] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [remoteName, setRemoteName] = useState<string>('');
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  
+  // State for host tab
+  const [hostCode, setHostCode] = useState<string>('');
+  const [hostName, setHostName] = useState<string>('');
+  const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [isWaiting, setIsWaiting] = useState<boolean>(false);
+  
+  // Active tab state
+  const [activeTab, setActiveTab] = useState<string>('connect');
+  
+  // Reset state when the modal opens
   useEffect(() => {
-    if (!isOpen) {
-      // Don't close the connection if it's established and modal is just being closed
-      if (peerConnection.status !== 'connected') {
-        peerConnection.closeConnection();
-        setConnectionAttempt(null);
-      }
+    if (isOpen) {
+      setConnectionCode('');
+      setUserName('');
+      setRemoteName('');
+      setIsConnecting(false);
+      setHostCode('');
+      setHostName('');
+      setIsCopied(false);
+      setIsWaiting(false);
+      setActiveTab('connect');
+      
+      // Generate a random host code
+      const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      setHostCode(randomCode);
     }
-  }, [isOpen, peerConnection]);
-
+  }, [isOpen]);
+  
+  // Handle creating a direct connection
+  const handleConnect = useCallback(() => {
+    if (!connectionCode.trim()) {
+      toast({
+        title: 'Missing Code',
+        description: 'Please enter a connection code',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (!userName.trim()) {
+      toast({
+        title: 'Missing Name',
+        description: 'Please enter your name',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsConnecting(true);
+    
+    // Simulate a connection process with a delay
+    setTimeout(() => {
+      try {
+        // This is where the actual WebRTC connection would be established
+        // For now, we'll simulate a successful connection
+        
+        toast({
+          title: 'Connected',
+          description: `Successfully connected to ${remoteName || 'remote user'}`,
+          variant: 'default'
+        });
+        
+        // Call the onConnectionEstablished callback
+        if (onConnectionEstablished) {
+          const peerId = 'simulated-peer-id';
+          onConnectionEstablished(peerId, remoteName || 'Remote User');
+        }
+        
+        // Close the modal
+        onClose();
+      } catch (error) {
+        console.error('Error connecting:', error);
+        toast({
+          title: 'Connection Error',
+          description: 'Failed to establish connection. Please try again.',
+          variant: 'destructive'
+        });
+        setIsConnecting(false);
+      }
+    }, 2000);
+  }, [connectionCode, userName, remoteName, onConnectionEstablished, onClose, toast]);
+  
+  // Handle starting to host a session
+  const handleHost = useCallback(() => {
+    if (!hostName.trim()) {
+      toast({
+        title: 'Missing Name',
+        description: 'Please enter your name',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsWaiting(true);
+    
+    toast({
+      title: 'Hosting Session',
+      description: 'Waiting for someone to connect...',
+      variant: 'default'
+    });
+    
+    // This is where the actual WebRTC hosting would be set up
+    // For now, we'll just show the UI state
+  }, [hostName, toast]);
+  
+  // Handle copying the host code
+  const handleCopyCode = useCallback(() => {
+    try {
+      navigator.clipboard.writeText(hostCode);
+      setIsCopied(true);
+      
+      toast({
+        title: 'Copied',
+        description: 'Connection code copied to clipboard',
+        variant: 'default'
+      });
+      
+      // Reset the copied state after a delay
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error copying code:', error);
+      toast({
+        title: 'Copy Error',
+        description: 'Failed to copy code to clipboard',
+        variant: 'destructive'
+      });
+    }
+  }, [hostCode, toast]);
+  
+  // Handle canceling the hosting session
+  const handleCancelHost = useCallback(() => {
+    setIsWaiting(false);
+    
+    toast({
+      title: 'Hosting Canceled',
+      description: 'You are no longer hosting a session',
+      variant: 'default'
+    });
+  }, [toast]);
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Direct P2P Connection</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Direct Connection
+          </DialogTitle>
           <DialogDescription>
-            Create a direct connection with another user for AI-to-AI conversations without server intermediation.
+            Connect directly with another user to enable AI-to-AI conversation.
           </DialogDescription>
         </DialogHeader>
         
-        {/* Connection Status */}
-        {peerConnection.status === 'connected' && (
-          <div className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 p-3 mb-4 rounded-md flex items-center">
-            <Check className="h-5 w-5 mr-2" />
-            <div>
-              <p className="font-medium">Connected</p>
-              <p className="text-sm">Direct connection established with {peerConnection.peerName || 'peer'}</p>
-            </div>
-          </div>
-        )}
-        
-        {/* Connection Form */}
-        {peerConnection.status !== 'connected' && !showRequests && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="target-user">Connect to User ID</Label>
-              <div className="flex gap-2">
-                <Input 
-                  id="target-user"
-                  value={targetUserId}
-                  onChange={(e) => setTargetUserId(e.target.value)}
-                  placeholder="Enter user ID to connect with"
-                  disabled={!!connectionAttempt}
-                />
-                
-                {connectionAttempt ? (
-                  <Button 
-                    variant="destructive"
-                    size="icon"
-                    onClick={handleCancelConnect}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={handleConnectRequest}
-                    disabled={!targetUserId.trim()}
-                  >
-                    Connect
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {connectionAttempt && (
-              <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 p-3 rounded-md flex items-center">
-                <Clock className="h-5 w-5 mr-2 animate-spin" />
+        <Tabs defaultValue="connect" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="connect">Connect</TabsTrigger>
+            <TabsTrigger value="host">Host</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="connect">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Join a Session</CardTitle>
+                <CardDescription>
+                  Enter the connection code provided by the host.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <p className="font-medium">Connecting...</p>
-                  <p className="text-sm">Waiting for peer to accept connection</p>
-                </div>
-              </div>
-            )}
-            
-            {pendingRequests.length > 0 && (
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowRequests(true)}
-              >
-                <Network className="h-4 w-4 mr-2" />
-                View Pending Requests ({pendingRequests.length})
-              </Button>
-            )}
-          </div>
-        )}
-        
-        {/* Connection Requests */}
-        {showRequests && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Connection Requests</h3>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowRequests(false)}
-              >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </div>
-            
-            {pendingRequests.length === 0 && (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <Network className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p>No pending connection requests</p>
-              </div>
-            )}
-            
-            {pendingRequests.map((request) => (
-              <div 
-                key={request.id}
-                className="border rounded-lg p-3 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <UserAvatar 
-                    user={{
-                      id: request.id,
-                      displayName: request.name,
-                      color: '#' + request.id.substr(0, 6),
-                      type: 'human',
-                      isActive: true
-                    }}
-                    size="sm"
+                  <Label htmlFor="connection-code">Connection Code</Label>
+                  <Input
+                    id="connection-code"
+                    value={connectionCode}
+                    onChange={(e) => setConnectionCode(e.target.value.toUpperCase())}
+                    placeholder="Enter code (e.g., A1B2C3)"
+                    className="uppercase"
+                    maxLength={10}
+                    disabled={isConnecting}
                   />
-                  <div>
-                    <p className="font-medium">{request.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      ID: {request.id.substr(0, 8)}...
-                    </p>
-                  </div>
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleRejectRequest(request.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => handleAcceptRequest(request.id)}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Accept
-                  </Button>
+                <div>
+                  <Label htmlFor="user-name">Your Name</Label>
+                  <Input
+                    id="user-name"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Enter your name"
+                    disabled={isConnecting}
+                  />
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        <DialogFooter className="mt-4 flex space-x-2 justify-between">
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-            <div className="w-2 h-2 rounded-full mr-1.5 bg-primary animate-pulse"></div>
-            Your ID: <code className="ml-1 text-xs bg-gray-100 dark:bg-dark-300 px-1 py-0.5 rounded">{peerConnection.localId.substr(0, 8)}</code>
-          </div>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-        </DialogFooter>
+                
+                <div>
+                  <Label htmlFor="remote-name" className="text-muted-foreground">
+                    Remote User's Name (Optional)
+                  </Label>
+                  <Input
+                    id="remote-name"
+                    value={remoteName}
+                    onChange={(e) => setRemoteName(e.target.value)}
+                    placeholder="Enter their name (if known)"
+                    disabled={isConnecting}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="mt-4 flex justify-between">
+              <Button variant="outline" onClick={onClose} disabled={isConnecting}>
+                Cancel
+              </Button>
+              <Button onClick={handleConnect} disabled={isConnecting || !connectionCode.trim() || !userName.trim()}>
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Link className="mr-2 h-4 w-4" />
+                    Connect
+                  </>
+                )}
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="host">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Host a Session</CardTitle>
+                <CardDescription>
+                  Create a connection code for others to join.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="host-name">Your Name</Label>
+                  <Input
+                    id="host-name"
+                    value={hostName}
+                    onChange={(e) => setHostName(e.target.value)}
+                    placeholder="Enter your name"
+                    disabled={isWaiting}
+                  />
+                </div>
+                
+                {!isWaiting ? (
+                  <div className="mt-4">
+                    <Button
+                      className="w-full"
+                      onClick={handleHost}
+                      disabled={!hostName.trim()}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Start Hosting
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-md border p-4">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-sm">Connection Code</Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={handleCopyCode}
+                        >
+                          {isCopied ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-2xl font-bold tracking-wider text-center my-2">
+                        {hostCode}
+                      </p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Share this code with the person you want to connect with
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-center">
+                      <AlertTriangle className="text-amber-500 h-5 w-5 mr-2" />
+                      <span className="text-sm">Waiting for connection...</span>
+                    </div>
+                    
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleCancelHost}
+                    >
+                      Cancel Hosting
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

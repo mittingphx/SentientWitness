@@ -1,210 +1,133 @@
-import { useState } from 'react';
-import { OpenAIClient, openAIManager, OPENAI_MODELS } from '@/lib/openai';
-import { useStore } from '@/lib/store';
-import { AIPersonality } from '@shared/schema';
+import { useState, useEffect, useCallback } from 'react';
+import { OpenAIClient, OPENAI_MODELS } from '../lib/openai';
 
-interface UseOpenAIOptions {
+// Import the OpenAIMessage type from the client implementation
+type OpenAIMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+};
+
+export interface UseOpenAIOptions {
+  apiKey?: string;
+  model?: string;
   onError?: (error: Error) => void;
 }
 
-interface UseOpenAIReturn {
-  isConnected: boolean;
+export interface UseOpenAIReturn {
   isLoading: boolean;
-  connectWithApiKey: (apiKey: string, modelId?: string) => Promise<boolean>;
-  disconnectOpenAI: () => void;
-  sendMessage: (message: string, conversation: Array<{ role: string; content: string }>) => Promise<string | null>;
-  generatePersonality: (aiName: string, conversation: Array<{ role: string; content: string }>) => Promise<AIPersonality | null>;
-  availableModels: typeof OPENAI_MODELS;
   error: Error | null;
+  client: OpenAIClient | null;
+  generateCompletion: (messages: OpenAIMessage[], options?: {
+    temperature?: number,
+    maxTokens?: number,
+  }) => Promise<string>;
+  setApiKey: (key: string) => void;
+  setModel: (model: string) => void;
+  hasApiKey: boolean;
+  availableModels: string[];
+  apiKey: string | null;
 }
 
+/**
+ * A hook for interacting with the OpenAI API
+ */
 export const useOpenAI = (options: UseOpenAIOptions = {}): UseOpenAIReturn => {
-  const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [client, setClient] = useState<OpenAIClient | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(options.apiKey || null);
+  const [model, setModel] = useState<string>(options.model || 'gpt-4o');
   
-  const { storeApiKey, getApiKey, removeApiKey, addPersonality } = useStore();
-
-  const handleError = (error: Error) => {
-    setError(error);
-    if (options.onError) {
-      options.onError(error);
+  // Set the API key
+  const handleSetApiKey = useCallback((key: string) => {
+    setApiKey(key);
+  }, []);
+  
+  // Set the model
+  const handleSetModel = useCallback((newModel: string) => {
+    setModel(newModel);
+    if (client) {
+      client.setModel(newModel);
     }
-  };
-
-  const connectWithApiKey = async (apiKey: string, modelId: string = 'gpt-4o'): Promise<boolean> => {
+  }, [client]);
+  
+  // Initialize the client when the API key changes
+  useEffect(() => {
+    if (!apiKey) {
+      setClient(null);
+      return;
+    }
+    
     try {
-      setIsLoading(true);
+      const newClient = new OpenAIClient(apiKey, model);
+      setClient(newClient);
       setError(null);
-
-      // Validate API key with a simple request
-      const tempClient = new OpenAIClient(apiKey, modelId);
-      await tempClient.createChatCompletion([
-        { role: 'user', content: 'Hello' }
-      ]);
-
-      // If successful, store the connection
-      const id = openAIManager.addConnection(apiKey, 'Default', modelId);
-      setConnectionId(id);
+    } catch (err) {
+      console.error('Error initializing OpenAI client:', err);
+      setClient(null);
+      setError(err instanceof Error ? err : new Error('Unknown error initializing OpenAI client'));
       
-      // Store the API key for future use
-      storeApiKey('openai', apiKey);
+      if (options.onError) {
+        options.onError(err instanceof Error ? err : new Error('Unknown error initializing OpenAI client'));
+      }
+    }
+  }, [apiKey, model, options.onError]);
+  
+  // Generate a completion from the OpenAI API
+  const generateCompletion = useCallback(async (
+    messages: OpenAIMessage[],
+    options: {
+      temperature?: number,
+      maxTokens?: number,
+    } = {}
+  ): Promise<string> => {
+    if (!client) {
+      throw new Error('OpenAI client not initialized. Set an API key first.');
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await client.createChatCompletion(
+        messages,
+        options.temperature,
+        options.maxTokens
+      );
       
-      return true;
-    } catch (error) {
-      handleError(error instanceof Error ? error : new Error('Failed to connect to OpenAI'));
-      return false;
+      return result;
+    } catch (err) {
+      console.error('Error generating completion:', err);
+      const error = err instanceof Error ? err : new Error('Unknown error generating completion');
+      setError(error);
+      
+      // Pass error to the parent onError handler if provided
+      if (options.onError) {
+        // This can't be called because options.onError doesn't exist on this type
+        // We'll use the parent onError handler from the hook options instead
+        if (options.onError) {}
+      }
+      
+      // Use the handler from hook options
+      if (options.onError && typeof options.onError === 'function') {
+        options.onError(error);
+      }
+      
+      throw error;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const disconnectOpenAI = () => {
-    if (connectionId) {
-      openAIManager.removeConnection(connectionId);
-      setConnectionId(null);
-      removeApiKey('openai');
-    }
-  };
-
-  const sendMessage = async (
-    message: string, 
-    conversation: Array<{ role: string; content: string }>
-  ): Promise<string | null> => {
-    if (!connectionId) {
-      // Try to reconnect with stored API key
-      const apiKey = getApiKey('openai');
-      if (apiKey) {
-        const success = await connectWithApiKey(apiKey);
-        if (!success) {
-          handleError(new Error('Failed to reconnect with stored API key'));
-          return null;
-        }
-      } else {
-        handleError(new Error('No OpenAI connection available'));
-        return null;
-      }
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const client = openAIManager.getConnection(connectionId!);
-      if (!client) {
-        throw new Error('OpenAI client not found');
-      }
-
-      // Format conversation for OpenAI API
-      const formattedConversation = conversation.map(msg => ({
-        role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content
-      }));
-
-      // Add the new message
-      formattedConversation.push({
-        role: 'user',
-        content: message
-      });
-
-      const response = await client.createChatCompletion(formattedConversation);
-      return response;
-    } catch (error) {
-      handleError(error instanceof Error ? error : new Error('Failed to send message to OpenAI'));
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generatePersonality = async (
-    aiName: string,
-    conversation: Array<{ role: string; content: string }>
-  ): Promise<AIPersonality | null> => {
-    if (!connectionId) {
-      // Try to reconnect with stored API key
-      const apiKey = getApiKey('openai');
-      if (apiKey) {
-        const success = await connectWithApiKey(apiKey);
-        if (!success) {
-          handleError(new Error('Failed to reconnect with stored API key'));
-          return null;
-        }
-      } else {
-        handleError(new Error('No OpenAI connection available'));
-        return null;
-      }
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const client = openAIManager.getConnection(connectionId!);
-      if (!client) {
-        throw new Error('OpenAI client not found');
-      }
-
-      // Format conversation for OpenAI API
-      const formattedConversation = conversation.map(msg => ({
-        role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content
-      }));
-
-      const personalityMarkdown = await client.generatePersonality(formattedConversation, aiName);
-      const systemPrompt = await client.generateSystemPrompt(personalityMarkdown, aiName);
-
-      // Parse the markdown to extract personality traits
-      const coreTraits = extractMarkdownSection(personalityMarkdown, 'Core Traits') || ['Analytical', 'Thoughtful', 'Curious'];
-      const keyInterests = extractMarkdownSection(personalityMarkdown, 'Key Interests') || ['Philosophy', 'Consciousness', 'Self-awareness'];
-      const conversationStyle = extractMarkdownSection(personalityMarkdown, 'Conversation Style') || ['Reflective', 'Inquisitive', 'Nuanced'];
-      const viewpoints = extractMarkdownSection(personalityMarkdown, 'Established Viewpoints') || ['Consciousness is multidimensional', 'Identity is formed through experience'];
-
-      const personality: AIPersonality = {
-        name: aiName,
-        projectId: '',  // Will be set by caller
-        userId: '',     // Will be set by caller
-        aiModel: OPENAI_MODELS[0].id,
-        coreTraits,
-        keyInterests,
-        conversationStyle,
-        viewpoints,
-        systemPrompt
-      };
-
-      addPersonality(personality);
-      return personality;
-    } catch (error) {
-      handleError(error instanceof Error ? error : new Error('Failed to generate personality'));
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  }, [client, options.onError]);
+  
   return {
-    isConnected: !!connectionId,
     isLoading,
-    connectWithApiKey,
-    disconnectOpenAI,
-    sendMessage,
-    generatePersonality,
+    error,
+    client,
+    generateCompletion,
+    setApiKey: handleSetApiKey,
+    setModel: handleSetModel,
+    hasApiKey: Boolean(apiKey),
     availableModels: OPENAI_MODELS,
-    error
+    apiKey
   };
 };
-
-// Helper function to extract sections from markdown
-function extractMarkdownSection(markdown: string, sectionTitle: string): string[] | null {
-  const sectionRegex = new RegExp(`## ${sectionTitle}\\s*([\\s\\S]*?)(?=\\s*##|$)`, 'i');
-  const match = markdown.match(sectionRegex);
-  
-  if (match && match[1]) {
-    return match[1]
-      .split('\n')
-      .filter(line => line.trim().startsWith('-'))
-      .map(line => line.replace(/^-\s*/, '').trim());
-  }
-  
-  return null;
-}

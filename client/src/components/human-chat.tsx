@@ -1,122 +1,195 @@
-import { useState, useRef, useEffect } from 'react';
-import { SessionMessage, SessionUser } from '@shared/schema';
-import UserAvatar from './user-avatar';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Users, 
-  Expand, 
-  Paperclip,
-  Send 
+  Send,
+  Mic,
+  MicOff,
+  MessageCircle
 } from 'lucide-react';
+import UserAvatar from './user-avatar';
+import { SessionMessage, SessionUser } from '../shared/schema';
+import VoiceInput from './voice-input';
 
 interface HumanChatProps {
   messages: SessionMessage[];
   currentUser: SessionUser | null;
   onSendMessage: (content: string, type: 'human') => void;
+  sendToAI?: boolean;
+  setSendToAI?: (value: boolean) => void;
 }
 
-export default function HumanChat({ messages, currentUser, onSendMessage }: HumanChatProps) {
-  const [messageContent, setMessageContent] = useState('');
+export default function HumanChat({ 
+  messages, 
+  currentUser, 
+  onSendMessage,
+  sendToAI = true,
+  setSendToAI
+}: HumanChatProps) {
+  const { toast } = useToast();
+  const [newMessage, setNewMessage] = useState<string>('');
+  const [isVoiceActive, setIsVoiceActive] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
+  
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToBottom();
   }, [messages]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-    }
-  }, [messageContent]);
-
-  const handleSendMessage = () => {
-    if (!messageContent.trim() || !currentUser) return;
-    
-    onSendMessage(messageContent, 'human');
-    setMessageContent('');
-    
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+  
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
+  
+  // Format timestamp for display
+  const formatTimestamp = (date: Date) => {
+    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  // Handle sending a message
+  const handleSendMessage = useCallback(() => {
+    if (!newMessage.trim()) return;
+    
+    if (!currentUser) {
+      toast({
+        title: 'Not connected',
+        description: 'Please connect to the chat first',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    onSendMessage(newMessage, 'human');
+    setNewMessage('');
+  }, [currentUser, newMessage, onSendMessage, toast]);
+  
+  // Handle key press in the textarea
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }, [handleSendMessage]);
+  
+  // Handle voice transcript
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setNewMessage((prev) => {
+      const newText = prev.trim() ? `${prev} ${text}` : text;
+      return newText;
+    });
+  }, []);
+  
+  // Toggle voice input
+  const toggleVoice = useCallback(() => {
+    setIsVoiceActive(!isVoiceActive);
+    
+    if (!isVoiceActive) {
+      toast({
+        title: 'Voice Input Activated',
+        description: 'Speak now and your words will be transcribed',
+        variant: 'default'
+      });
+    }
+  }, [isVoiceActive, toast]);
+  
   return (
-    <div className="w-96 flex flex-col overflow-hidden bg-gray-50 dark:bg-dark-300">
-      {/* Header */}
-      <div className="bg-gray-100 dark:bg-dark-400 p-3 border-b border-gray-200 dark:border-dark-100 flex items-center justify-between">
-        <h3 className="font-medium text-sm">Witness Chat</h3>
-        <div className="flex items-center space-x-2">
-          <button className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1">
-            <Users className="h-4 w-4" />
-          </button>
-          <button className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1">
-            <Expand className="h-4 w-4" />
-          </button>
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Human Chat</h2>
         </div>
+        
+        {setSendToAI && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm cursor-pointer" htmlFor="send-to-ai">
+              Send to AI
+            </label>
+            <input
+              type="checkbox"
+              id="send-to-ai"
+              checked={sendToAI}
+              onChange={(e) => setSendToAI(e.target.checked)}
+              className="checkbox"
+            />
+          </div>
+        )}
       </div>
       
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
-        {messages.filter(m => m.type === 'human').map((message) => (
-          <div key={message.id} className="chat-message flex items-start space-x-3">
-            <UserAvatar user={message.sender} />
-            <div className="flex-1">
-              <div className="flex items-center mb-1">
-                <span className="font-medium text-sm">{message.sender.displayName}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                  {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </span>
-              </div>
-              <div className="bg-white dark:bg-dark-200 rounded-lg p-3 text-sm">
-                {message.content.split('\n').map((paragraph, i) => (
-                  <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                    {paragraph}
-                  </p>
-                ))}
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.filter(m => m.type === 'human').map((message) => (
+            <div key={message.id} className="chat-message">
+              <div className="flex items-start gap-3">
+                <UserAvatar user={message.sender} />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{message.sender.displayName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatTimestamp(message.timestamp)}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-sm whitespace-pre-wrap">
+                    {message.content}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      {/* Input area */}
-      <div className="p-3 bg-white dark:bg-dark-400 border-t border-gray-200 dark:border-dark-100">
-        <div className="flex items-center space-x-2">
-          <div className="flex-1 bg-gray-100 dark:bg-dark-200 rounded-lg flex items-center">
-            <Textarea
-              ref={textareaRef}
-              value={messageContent}
-              onChange={(e) => setMessageContent(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              placeholder="Type your message..."
-              className="w-full bg-transparent border-0 p-3 text-sm focus:ring-0 focus:outline-none resize-none min-h-10 max-h-40"
-            />
-            <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <Paperclip className="h-4 w-4" />
-            </button>
-          </div>
-          <Button
-            onClick={handleSendMessage}
-            disabled={!messageContent.trim() || !currentUser}
-            className="bg-gray-800 dark:bg-primary text-white p-3 rounded-full flex-shrink-0 hover:bg-gray-700 dark:hover:bg-primary/90 transition-colors h-10 w-10"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
+      </ScrollArea>
+      
+      <div className="p-3 border-t">
+        <div className="flex items-end gap-2">
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Type your message..."
+            className="min-h-[80px] resize-none"
+          />
+          
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={toggleVoice} 
+              size="icon" 
+              variant={isVoiceActive ? "default" : "outline"}
+              className="rounded-full"
+              title={isVoiceActive ? "Stop voice input" : "Start voice input"}
+            >
+              {isVoiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+            
+            <Button 
+              onClick={handleSendMessage} 
+              size="icon"
+              className="rounded-full"
+              disabled={!newMessage.trim() || !currentUser}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {isVoiceActive && (
+          <div className="mt-2">
+            <VoiceInput
+              onTranscript={handleVoiceTranscript}
+              autoSubmitAfterSilence
+              silenceTimeout={2000}
+              className="w-full"
+            />
+          </div>
+        )}
+        
+        {!currentUser && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Please connect to participate in the conversation
+          </p>
+        )}
       </div>
     </div>
   );

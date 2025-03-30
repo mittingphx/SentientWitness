@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { UseWebSocketReturn } from './use-websocket-connection';
+import { UseWebSocketReturn, WebSocketMessage } from './use-websocket';
 
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-type DataHandler = (data: any) => void;
-type SignalingMessage = {
-  type: 'offer' | 'answer' | 'ice-candidate' | 'peer-disconnect';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+export type DataHandler = (data: any) => void;
+
+export type SignalingContent = {
+  signalingType: 'offer' | 'answer' | 'ice-candidate' | 'peer-disconnect';
   senderId: string;
-  targetId?: string;
+  senderName?: string;
+  targetId: string;
   sessionId: string;
   payload: any;
 };
 
-interface PeerMessage {
+export interface PeerMessage {
   type: string;
   content: any;
   senderId: string;
@@ -20,18 +23,18 @@ interface PeerMessage {
   timestamp: string;
 }
 
-interface UsePeerConnectionOptions {
+export interface UsePeerConnectionOptions {
   onData?: DataHandler;
-  onConnectionChange?: (status: ConnectionStatus, peerId?: string) => void;
+  onConnectionChange?: (status: ConnectionStatus, peerId?: string, peerName?: string) => void;
   onError?: (error: any) => void;
 }
 
-interface UsePeerConnectionReturn {
+export interface UsePeerConnectionReturn {
   status: ConnectionStatus;
   peerId: string | null;
   peerName: string | null;
-  createOffer: (targetId: string, sessionId: string) => Promise<void>;
-  acceptOffer: (offer: RTCSessionDescriptionInit, senderId: string, sessionId: string) => Promise<void>;
+  createOffer: (targetId: string, targetName: string, sessionId: string) => Promise<void>;
+  acceptOffer: (offer: RTCSessionDescriptionInit, senderId: string, senderName: string, sessionId: string) => Promise<void>;
   sendData: (data: any) => boolean;
   closeConnection: () => void;
   localId: string;
@@ -45,227 +48,352 @@ export const usePeerConnection = (
   wsConnection: UseWebSocketReturn,
   options: UsePeerConnectionOptions = {}
 ): UsePeerConnectionReturn => {
-  const { onData, onConnectionChange, onError } = options;
-  
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [peerId, setPeerId] = useState<string | null>(null);
   const [peerName, setPeerName] = useState<string | null>(null);
-  const [isInitiator, setIsInitiator] = useState(false);
+  const [isInitiator, setIsInitiator] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   
-  const localId = useRef(uuidv4()).current;
-  const peerConnection = useRef<RTCPeerConnection | null>(null);
-  const dataChannel = useRef<RTCDataChannel | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
+  const localIdRef = useRef<string>(uuidv4());
+  
+  // Generate a local ID
+  const localId = localIdRef.current;
+  
+  // Set options
+  const { onData, onConnectionChange, onError } = options;
+  
+  /**
+   * Update connection status and notify through callback
+   */
+  const updateStatus = useCallback((newStatus: ConnectionStatus, connectedPeerId?: string, connectedPeerName?: string) => {
+    setStatus(newStatus);
+    
+    if (newStatus === 'connected') {
+      setPeerId(connectedPeerId || null);
+      setPeerName(connectedPeerName || null);
+    } else if (newStatus === 'disconnected') {
+      setPeerId(null);
+      setPeerName(null);
+    }
+    
+    if (onConnectionChange) {
+      onConnectionChange(newStatus, connectedPeerId, connectedPeerName);
+    }
+  }, [onConnectionChange]);
+  
+  /**
+   * Handle a WebSocket message for signaling
+   */
+  useEffect(() => {
+    const handleWebSocketMessage = (message: WebSocketMessage) => {
+      if (message.type !== 'signaling') return;
+      
+      const signalingContent = message.content as SignalingContent;
+      
+      // Make sure the message is intended for us
+      if (signalingContent.targetId !== localId) return;
+      
+      // Handle the signaling message based on its type
+      switch (signalingContent.signalingType) {
+        case 'offer':
+          if (signalingContent.senderId && status === 'disconnected') {
+            handleOffer(
+              signalingContent.payload,
+              signalingContent.senderId,
+              signalingContent.senderName || 'Peer',
+              signalingContent.sessionId
+            );
+          }
+          break;
+        case 'answer':
+          if (signalingContent.senderId && status === 'connecting') {
+            handleAnswer(signalingContent.payload);
+          }
+          break;
+        case 'ice-candidate':
+          if (peerConnectionRef.current) {
+            addIceCandidate(signalingContent.payload);
+          }
+          break;
+        case 'peer-disconnect':
+          if (signalingContent.senderId === peerId) {
+            closeConnection();
+          }
+          break;
+      }
+    };
+    
+    // Listen for WebSocket messages using a custom event
+    const messageListener = (e: CustomEvent) => {
+      const message = e.detail;
+      handleWebSocketMessage(message);
+    };
+    
+    window.addEventListener('websocket-message', messageListener as EventListener);
+    
+    return () => {
+      window.removeEventListener('websocket-message', messageListener as EventListener);
+    };
+  }, [localId, peerId, status]);
   
   /**
    * Initialize a new peer connection
    */
   const initPeerConnection = useCallback(() => {
-    if (peerConnection.current) {
-      peerConnection.current.close();
-    }
-    
-    // Configure ICE servers (STUN/TURN) for NAT traversal
-    const configuration: RTCConfiguration = {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-      ]
-    };
-    
-    const pc = new RTCPeerConnection(configuration);
-    peerConnection.current = pc;
-    
-    // Handle ICE candidate events
-    pc.onicecandidate = (event) => {
-      if (event.candidate && peerId && wsConnection.status === 'connected') {
-        const signalingMessage: SignalingMessage = {
-          type: 'ice-candidate',
-          senderId: localId,
-          targetId: peerId,
-          sessionId: '',  // Will be set by the caller
-          payload: event.candidate
-        };
+    try {
+      // Close any existing connection
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+      }
+      
+      // Create a new peer connection
+      const configuration: RTCConfiguration = {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' }
+        ]
+      };
+      
+      const pc = new RTCPeerConnection(configuration);
+      
+      // Set up event handlers
+      pc.onicecandidate = (event) => {
+        if (event.candidate && wsConnection.status === 'open' && peerId) {
+          const signalingContent: SignalingContent = {
+            signalingType: 'ice-candidate',
+            senderId: localId,
+            targetId: peerId,
+            sessionId: sessionId || '',
+            payload: event.candidate
+          };
+          
+          wsConnection.sendMessage({
+            type: 'signaling',
+            content: signalingContent
+          });
+        }
+      };
+      
+      pc.oniceconnectionstatechange = () => {
+        console.log('ICE connection state:', pc.iceConnectionState);
         
-        wsConnection.sendMessage({
-          type: 'signaling',
-          signalingType: 'ice-candidate',
-          targetId: peerId,
-          senderId: localId,
-          payload: event.candidate
-        });
+        if (pc.iceConnectionState === 'disconnected' || 
+            pc.iceConnectionState === 'failed' || 
+            pc.iceConnectionState === 'closed') {
+          updateStatus('disconnected');
+        }
+      };
+      
+      pc.ondatachannel = (event) => {
+        setupDataChannel(event.channel);
+      };
+      
+      peerConnectionRef.current = pc;
+    } catch (error) {
+      console.error('Error initializing peer connection:', error);
+      updateStatus('error');
+      
+      if (onError) {
+        onError(error);
       }
-    };
-    
-    // Handle connection state changes
-    pc.onconnectionstatechange = () => {
-      switch(pc.connectionState) {
-        case 'connected':
-          setStatus('connected');
-          if (onConnectionChange) onConnectionChange('connected', peerId);
-          break;
-        case 'disconnected':
-        case 'failed':
-        case 'closed':
-          setStatus('disconnected');
-          if (onConnectionChange) onConnectionChange('disconnected');
-          break;
-        case 'connecting':
-          setStatus('connecting');
-          if (onConnectionChange) onConnectionChange('connecting');
-          break;
-      }
-    };
-    
-    // Handle data channel events when we're the receiver (not initiator)
-    pc.ondatachannel = (event) => {
-      setupDataChannel(event.channel);
-    };
-    
-    return pc;
-  }, [localId, peerId, wsConnection, onConnectionChange]);
+    }
+  }, [localId, onError, peerId, sessionId, updateStatus, wsConnection]);
   
   /**
    * Set up and configure the data channel
    */
   const setupDataChannel = useCallback((channel: RTCDataChannel) => {
-    dataChannel.current = channel;
+    console.log('Setting up data channel:', channel.label);
     
     channel.onopen = () => {
-      setStatus('connected');
-      if (onConnectionChange) onConnectionChange('connected', peerId);
+      console.log('Data channel is open');
+      updateStatus('connected', peerId, peerName);
     };
     
     channel.onclose = () => {
-      setStatus('disconnected');
-      if (onConnectionChange) onConnectionChange('disconnected');
-    };
-    
-    channel.onerror = (error) => {
-      setStatus('error');
-      if (onError) onError(error);
+      console.log('Data channel is closed');
+      updateStatus('disconnected');
     };
     
     channel.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
-        
-        // Handle peer identification
-        if (message.type === 'peer-identity') {
-          setPeerId(message.senderId);
-          setPeerName(message.senderName);
-        }
+        const data = JSON.parse(event.data);
         
         if (onData) {
-          onData(message);
+          onData(data);
         }
-      } catch (err) {
-        console.error('Failed to parse message from peer:', err);
+      } catch (error) {
+        console.error('Error parsing data channel message:', error);
       }
     };
-  }, [peerId, onConnectionChange, onData, onError]);
+    
+    dataChannelRef.current = channel;
+  }, [onData, peerId, peerName, updateStatus]);
   
   /**
    * Create an offer to initiate a peer connection
    */
-  const createOffer = useCallback(async (targetId: string, sessionId: string) => {
+  const createOffer = useCallback(async (targetId: string, targetName: string, chatSessionId: string) => {
     try {
-      setPeerId(targetId);
+      updateStatus('connecting');
       setIsInitiator(true);
+      setSessionId(chatSessionId);
       
-      const pc = initPeerConnection();
+      // Initialize the peer connection
+      initPeerConnection();
       
-      // Create a data channel as the initiator
-      const channel = pc.createDataChannel('data');
-      setupDataChannel(channel);
+      if (!peerConnectionRef.current) {
+        throw new Error('Peer connection not initialized');
+      }
       
-      // Create and send an offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      // Create a data channel
+      const dataChannel = peerConnectionRef.current.createDataChannel('chat', {
+        ordered: true
+      });
+      
+      setupDataChannel(dataChannel);
+      
+      // Create and set the local description (offer)
+      const offer = await peerConnectionRef.current.createOffer();
+      await peerConnectionRef.current.setLocalDescription(offer);
+      
+      // Send the offer to the target peer through the WebSocket
+      const signalingContent: SignalingContent = {
+        signalingType: 'offer',
+        senderId: localId,
+        senderName: 'Me', // Will be replaced by actual username later
+        targetId: targetId,
+        sessionId: chatSessionId,
+        payload: offer
+      };
       
       wsConnection.sendMessage({
         type: 'signaling',
-        signalingType: 'offer',
-        senderId: localId,
-        senderName: 'User ' + localId.substring(0, 5),
-        targetId,
-        sessionId,
-        payload: offer
+        content: signalingContent
       });
       
-      setStatus('connecting');
+      // Set the peer ID
+      setPeerId(targetId);
+      setPeerName(targetName);
     } catch (error) {
-      setStatus('error');
-      if (onError) onError(error);
-      throw error;
+      console.error('Error creating offer:', error);
+      updateStatus('error');
+      
+      if (onError) {
+        onError(error);
+      }
     }
-  }, [localId, initPeerConnection, setupDataChannel, wsConnection, onError]);
+  }, [initPeerConnection, localId, onError, setupDataChannel, updateStatus, wsConnection]);
   
   /**
    * Accept an offer from a peer
    */
-  const acceptOffer = useCallback(async (offer: RTCSessionDescriptionInit, senderId: string, sessionId: string) => {
+  const acceptOffer = useCallback(async (offer: RTCSessionDescriptionInit, senderId: string, senderName: string, chatSessionId: string) => {
     try {
-      setPeerId(senderId);
+      updateStatus('connecting');
       setIsInitiator(false);
+      setSessionId(chatSessionId);
       
-      const pc = initPeerConnection();
+      // Initialize the peer connection
+      initPeerConnection();
       
-      // Set the remote description from the offer
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      if (!peerConnectionRef.current) {
+        throw new Error('Peer connection not initialized');
+      }
       
-      // Create and send an answer
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      // Set the remote description
+      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+      
+      // Create and set the local description (answer)
+      const answer = await peerConnectionRef.current.createAnswer();
+      await peerConnectionRef.current.setLocalDescription(answer);
+      
+      // Send the answer back to the initiator
+      const signalingContent: SignalingContent = {
+        signalingType: 'answer',
+        senderId: localId,
+        senderName: 'Me', // Will be replaced by actual username later
+        targetId: senderId,
+        sessionId: chatSessionId,
+        payload: answer
+      };
       
       wsConnection.sendMessage({
         type: 'signaling',
-        signalingType: 'answer',
-        senderId: localId,
-        senderName: 'User ' + localId.substring(0, 5),
-        targetId: senderId,
-        sessionId,
-        payload: answer
+        content: signalingContent
       });
       
-      setStatus('connecting');
+      // Set the peer ID
+      setPeerId(senderId);
+      setPeerName(senderName);
     } catch (error) {
-      setStatus('error');
-      if (onError) onError(error);
-      throw error;
+      console.error('Error accepting offer:', error);
+      updateStatus('error');
+      
+      if (onError) {
+        onError(error);
+      }
     }
-  }, [localId, initPeerConnection, wsConnection, onError]);
+  }, [initPeerConnection, localId, onError, updateStatus, wsConnection]);
+  
+  /**
+   * Handle an offer from a peer
+   */
+  const handleOffer = useCallback(async (offer: RTCSessionDescriptionInit, senderId: string, senderName: string, chatSessionId: string) => {
+    try {
+      // Accept the offer
+      await acceptOffer(offer, senderId, senderName, chatSessionId);
+    } catch (error) {
+      console.error('Error handling offer:', error);
+      updateStatus('error');
+      
+      if (onError) {
+        onError(error);
+      }
+    }
+  }, [acceptOffer, onError, updateStatus]);
   
   /**
    * Handle an answer to our offer
    */
   const handleAnswer = useCallback(async (answer: RTCSessionDescriptionInit) => {
     try {
-      if (!peerConnection.current) {
-        throw new Error('No peer connection established');
+      if (!peerConnectionRef.current) {
+        throw new Error('Peer connection not initialized');
       }
       
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
     } catch (error) {
-      setStatus('error');
-      if (onError) onError(error);
+      console.error('Error handling answer:', error);
+      updateStatus('error');
+      
+      if (onError) {
+        onError(error);
+      }
     }
-  }, [onError]);
+  }, [onError, updateStatus]);
   
   /**
    * Add an ICE candidate from the peer
    */
   const addIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
     try {
-      if (!peerConnection.current) {
-        throw new Error('No peer connection established');
+      if (!peerConnectionRef.current) {
+        throw new Error('Peer connection not initialized');
       }
       
-      await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+      await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (error) {
-      if (onError) onError(error);
+      console.error('Error adding ICE candidate:', error);
+      
+      if (onError) {
+        onError(error);
+      }
     }
   }, [onError]);
   
@@ -273,23 +401,24 @@ export const usePeerConnection = (
    * Send data to the peer
    */
   const sendData = useCallback((data: any): boolean => {
-    if (!dataChannel.current || dataChannel.current.readyState !== 'open') {
+    if (!dataChannelRef.current || dataChannelRef.current.readyState !== 'open') {
+      console.error('Data channel not open');
       return false;
     }
     
     try {
       const message: PeerMessage = {
-        type: typeof data === 'object' && data.type ? data.type : 'data',
-        content: data,
+        type: data.type || 'message',
+        content: data.content,
         senderId: localId,
-        senderName: 'User ' + localId.substring(0, 5),
+        senderName: data.senderName || 'Me',
         timestamp: new Date().toISOString()
       };
       
-      dataChannel.current.send(JSON.stringify(message));
+      dataChannelRef.current.send(JSON.stringify(message));
       return true;
-    } catch (err) {
-      console.error('Error sending data:', err);
+    } catch (error) {
+      console.error('Error sending data:', error);
       return false;
     }
   }, [localId]);
@@ -298,69 +427,49 @@ export const usePeerConnection = (
    * Close the connection
    */
   const closeConnection = useCallback(() => {
-    // Send disconnection signal if we have a peer
-    if (peerId && wsConnection.status === 'connected') {
-      wsConnection.sendMessage({
-        type: 'signaling',
-        signalingType: 'peer-disconnect',
-        senderId: localId,
-        targetId: peerId,
-        sessionId: '',
-        payload: null
-      });
-    }
-    
-    // Close data channel
-    if (dataChannel.current) {
-      dataChannel.current.close();
-      dataChannel.current = null;
-    }
-    
-    // Close peer connection
-    if (peerConnection.current) {
-      peerConnection.current.close();
-      peerConnection.current = null;
-    }
-    
-    setPeerId(null);
-    setPeerName(null);
-    setStatus('disconnected');
-    setIsInitiator(false);
-  }, [localId, peerId, wsConnection]);
-  
-  // Handle WebSocket signaling messages
-  useEffect(() => {
-    const handleSignalingMessage = (message: any) => {
-      if (!message || message.type !== 'signaling') return;
-      
-      // Only process messages targeting this client
-      if (message.targetId && message.targetId !== localId) return;
-      
-      switch (message.signalingType) {
-        case 'answer':
-          if (message.senderId === peerId) {
-            handleAnswer(message.payload);
-          }
-          break;
-        case 'ice-candidate':
-          if (message.senderId === peerId) {
-            addIceCandidate(message.payload);
-          }
-          break;
-        case 'peer-disconnect':
-          if (message.senderId === peerId) {
-            closeConnection();
-          }
-          break;
+    try {
+      // Notify the peer that we're disconnecting
+      if (peerId && wsConnection.status === 'open') {
+        const signalingContent: SignalingContent = {
+          signalingType: 'peer-disconnect',
+          senderId: localId,
+          targetId: peerId,
+          sessionId: sessionId || '',
+          payload: {}
+        };
+        
+        wsConnection.sendMessage({
+          type: 'signaling',
+          content: signalingContent
+        });
       }
-    };
-    
-    if (wsConnection.lastMessage) {
-      handleSignalingMessage(wsConnection.lastMessage);
+      
+      // Close the data channel
+      if (dataChannelRef.current) {
+        dataChannelRef.current.close();
+        dataChannelRef.current = null;
+      }
+      
+      // Close the peer connection
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      
+      // Reset state
+      updateStatus('disconnected');
+      setIsInitiator(false);
+      setSessionId(null);
+    } catch (error) {
+      console.error('Error closing connection:', error);
+      
+      if (onError) {
+        onError(error);
+      }
     }
-  }, [wsConnection.lastMessage, localId, peerId, handleAnswer, addIceCandidate, closeConnection]);
+  }, [localId, onError, peerId, sessionId, updateStatus, wsConnection]);
   
-  // Clean up on unmount
+  // Clean up when component unmounts
   useEffect(() => {
     return () => {
       closeConnection();

@@ -6,7 +6,7 @@ import {
   SessionProject,
   SessionMessage,
   AIPersonality
-} from '@shared/schema';
+} from '../shared/schema';
 
 // Define the store state
 interface StoreState {

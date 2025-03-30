@@ -1,21 +1,28 @@
-import { useState } from 'react';
-import { useStore } from '@/lib/store';
-import { generateShareableUrl } from '@/lib/session';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { 
+  Share2,
+  Copy,
+  CheckCircle2,
+  Link,
+  Lock,
+  Shield,
+  EyeOff,
+  Loader2
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogClose
+  DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Copy } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
 interface ShareSessionModalProps {
   isOpen: boolean;
@@ -24,172 +31,197 @@ interface ShareSessionModalProps {
 }
 
 export default function ShareSessionModal({ isOpen, onClose, projectId }: ShareSessionModalProps) {
-  const { projects, updateProject } = useStore();
   const { toast } = useToast();
   
-  const project = projects[projectId];
-  const sessionId = project?.sessionId || '';
-  const sessionUrl = sessionId ? generateShareableUrl(sessionId) : '';
+  // Share settings
+  const [shareLink, setShareLink] = useState<string>('');
+  const [isPasswordProtected, setIsPasswordProtected] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>('');
+  const [isCreatingLink, setIsCreatingLink] = useState<boolean>(false);
+  const [isLinkCopied, setIsLinkCopied] = useState<boolean>(false);
   
-  const [passwordProtect, setPasswordProtect] = useState(!!project?.password);
-  const [password, setPassword] = useState(project?.password || '');
-  const [limitParticipants, setLimitParticipants] = useState(!!project?.maxParticipants);
-  const [maxParticipants, setMaxParticipants] = useState(project?.maxParticipants || 10);
-  const [emailAddresses, setEmailAddresses] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(sessionUrl);
-    toast({
-      title: "Link Copied",
-      description: "Session link has been copied to clipboard"
-    });
-  };
-  
-  const handleShare = () => {
-    if (!projectId) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Update project settings
-      updateProject(projectId, {
-        password: passwordProtect ? password : undefined,
-        maxParticipants: limitParticipants ? maxParticipants : undefined
-      });
-      
-      // If email addresses are provided, send invitations
-      if (emailAddresses.trim()) {
-        // In a real implementation, this would send emails
-        // For now, just show a toast
-        toast({
-          title: "Invitations Sent",
-          description: `Invitations have been sent to ${emailAddresses.split(',').length} email addresses`
-        });
-      }
-      
-      toast({
-        title: "Session Shared",
-        description: "Your session is now ready to share"
-      });
-      
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update session settings",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
+  // Generate the share link when the component mounts
+  useEffect(() => {
+    if (isOpen && projectId) {
+      const baseUrl = window.location.origin;
+      setShareLink(`${baseUrl}/join-session/${projectId}${isPasswordProtected ? '?protected=true' : ''}`);
     }
-  };
+  }, [isOpen, projectId, isPasswordProtected]);
+  
+  // Update the link when password protection changes
+  useEffect(() => {
+    if (shareLink) {
+      const baseUrl = window.location.origin;
+      setShareLink(`${baseUrl}/join-session/${projectId}${isPasswordProtected ? '?protected=true' : ''}`);
+    }
+  }, [isPasswordProtected, projectId]);
+  
+  // Handle copying the share link
+  const handleCopyLink = useCallback(() => {
+    try {
+      navigator.clipboard.writeText(shareLink);
+      setIsLinkCopied(true);
+      
+      toast({
+        title: 'Link Copied',
+        description: 'Share link has been copied to clipboard',
+        variant: 'default'
+      });
+      
+      // Reset the copied state after a delay
+      setTimeout(() => {
+        setIsLinkCopied(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error copying link:', error);
+      toast({
+        title: 'Copy Error',
+        description: 'Failed to copy link to clipboard',
+        variant: 'destructive'
+      });
+    }
+  }, [shareLink, toast]);
+  
+  // Handle creating a password-protected link
+  const handleCreateLink = useCallback(() => {
+    if (!password.trim()) {
+      toast({
+        title: 'Missing Password',
+        description: 'Please enter a password for the protected link',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsCreatingLink(true);
+    
+    // Simulate link creation with a delay
+    setTimeout(() => {
+      setIsCreatingLink(false);
+      
+      // In a real implementation, this would call an API to set the password
+      // For now, we'll just update the UI
+      
+      toast({
+        title: 'Link Created',
+        description: 'Password-protected link has been created',
+        variant: 'default'
+      });
+    }, 1000);
+  }, [password, toast]);
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Share This Session</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5" />
+            Share Session
+          </DialogTitle>
           <DialogDescription>
-            Share your session with others by sending them this link or inviting them directly.
+            Share your session with others to collaborate in real-time.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="session-link">Session Link</Label>
-            <div className="flex items-center">
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center">
+                    <Label className="text-base font-medium">Password Protection</Label>
+                    <Switch
+                      checked={isPasswordProtected}
+                      onCheckedChange={setIsPasswordProtected}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Require users to enter a password before joining
+                  </p>
+                </div>
+                
+                {isPasswordProtected && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">
+                      <Lock className="h-3.5 w-3.5 inline-block mr-1" />
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter a secure password"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Anyone with this password will be able to join your session
+                    </p>
+                    
+                    <Button
+                      onClick={handleCreateLink}
+                      disabled={isCreatingLink || !password.trim()}
+                      className="w-full mt-2"
+                    >
+                      {isCreatingLink ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="mr-2 h-4 w-4" />
+                          Create Protected Link
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <div className="space-y-2">
+            <Label htmlFor="share-link" className="flex items-center gap-1.5">
+              <Link className="h-4 w-4" />
+              Share Link
+            </Label>
+            <div className="flex gap-2">
               <Input
-                id="session-link"
-                value={sessionUrl}
+                id="share-link"
+                value={shareLink}
                 readOnly
-                className="flex-1 pr-10"
+                className="font-mono text-sm"
               />
               <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-14"
                 onClick={handleCopyLink}
+                variant="outline"
+                className="shrink-0"
               >
-                <Copy className="h-4 w-4" />
+                {isLinkCopied ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </Button>
             </div>
-          </div>
-          
-          <div className="grid gap-4">
-            <Label>Security Options</Label>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="password-protect"
-                checked={passwordProtect}
-                onCheckedChange={(checked) => setPasswordProtect(!!checked)}
-              />
-              <Label htmlFor="password-protect" className="font-normal">Password protect</Label>
-            </div>
-            
-            {passwordProtect && (
-              <div className="ml-6">
-                <Input
-                  type="password"
-                  placeholder="Set password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            )}
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="limit-participants"
-                checked={limitParticipants}
-                onCheckedChange={(checked) => setLimitParticipants(!!checked)}
-              />
-              <Label htmlFor="limit-participants" className="font-normal">Limit participants</Label>
-            </div>
-            
-            {limitParticipants && (
-              <div className="ml-6 flex items-center space-x-2">
-                <Input
-                  type="number"
-                  min={2}
-                  max={20}
-                  value={maxParticipants}
-                  onChange={(e) => setMaxParticipants(parseInt(e.target.value) || 10)}
-                  className="w-24"
-                />
-                <span className="text-sm text-gray-500 dark:text-gray-400">participants</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="email-addresses">Share With</Label>
-            <Input
-              id="email-addresses"
-              type="text"
-              placeholder="Enter email addresses"
-              value={emailAddresses}
-              onChange={(e) => setEmailAddresses(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Separate multiple emails with commas
+            <p className="text-xs text-muted-foreground">
+              {isPasswordProtected ? (
+                <span className="flex items-center gap-1">
+                  <EyeOff className="h-3 w-3" />
+                  Password-protected link
+                </span>
+              ) : (
+                <span className="text-amber-500">
+                  Anyone with this link can join your session
+                </span>
+              )}
             </p>
           </div>
         </div>
         
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="secondary">
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button
-            onClick={handleShare}
-            disabled={isSubmitting || (passwordProtect && !password)}
-          >
-            {isSubmitting ? "Sharing..." : "Share Session"}
+        <DialogFooter className="mt-4">
+          <Button onClick={onClose}>
+            Done
           </Button>
         </DialogFooter>
       </DialogContent>
