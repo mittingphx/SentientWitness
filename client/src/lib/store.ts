@@ -27,7 +27,7 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
     colors: {
       primary: '#0074e8',  // 10% brighter blue
       secondary: '#00a8a8', // slightly brighter teal
-      background: 'rgba(0, 85, 170, 0.25)', // 25% of the way to sidebar color
+      background: '#ecf5ff', // Original background
       text: '#001133',
       sidebar: '#0055aa', // more washed out, bit more green-tinted blue
       accent: '#00ccff'
@@ -49,7 +49,7 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
     colors: {
       primary: '#2c5e1a',
       secondary: '#77a61d',
-      background: 'rgba(26, 61, 12, 0.15)', // 15% of the way to sidebar color
+      background: '#f0f7e9', // Original background
       text: '#1e3d12',
       sidebar: '#1a3d0c',
       accent: '#abd359'
@@ -184,6 +184,10 @@ export const useStore = create<StoreState>()(
           
           document.documentElement.style.setProperty('--primary-color-rgb', hexToRgb(primaryColor) || '0, 116, 232');
           document.documentElement.style.setProperty('--secondary-color-rgb', hexToRgb(secondaryColor) || '0, 168, 168');
+          
+          // Add theme class to body for additional CSS targeting
+          document.body.classList.remove('ocean-theme', 'forest-theme', 'dracula-theme', 'midnight-theme', 'sunset-theme', 'retro-theme');
+          document.body.classList.add(`${schemeName}-theme`);
         }
       },
       
@@ -234,6 +238,10 @@ export const useStore = create<StoreState>()(
           
           document.documentElement.style.setProperty('--primary-color-rgb', hexToRgb(primaryColor) || '0, 116, 232');
           document.documentElement.style.setProperty('--secondary-color-rgb', hexToRgb(secondaryColor) || '0, 168, 168');
+          
+          // Add theme class to body for additional CSS targeting
+          document.body.classList.remove('ocean-theme', 'forest-theme', 'dracula-theme', 'midnight-theme', 'sunset-theme', 'retro-theme');
+          document.body.classList.add(`${colorScheme}-theme`);
         }
       },
       
