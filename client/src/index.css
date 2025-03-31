@@ -19,6 +19,7 @@
     --text-color: #001133;
     --sidebar-color: #0055aa; /* more washed out, bit more green-tinted blue */
     --accent-color: #00ccff;
+    --card-bg-color: rgba(255, 255, 255, 0.9); /* Slightly transparent card background */
     
     /* Chat message variables - these now reference the theme variables */
     --ai-bg: rgba(var(--primary-color-rgb, 0, 116, 232), 0.05);

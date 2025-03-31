@@ -27,7 +27,7 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
     colors: {
       primary: '#0074e8',  // 10% brighter blue
       secondary: '#00a8a8', // slightly brighter teal
-      background: '#ecf5ff', // slightly more washed out background
+      background: 'rgba(0, 85, 170, 0.25)', // 25% of the way to sidebar color
       text: '#001133',
       sidebar: '#0055aa', // more washed out, bit more green-tinted blue
       accent: '#00ccff'
@@ -49,7 +49,7 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
     colors: {
       primary: '#2c5e1a',
       secondary: '#77a61d',
-      background: '#f0f7e9',
+      background: 'rgba(26, 61, 12, 0.15)', // 15% of the way to sidebar color
       text: '#1e3d12',
       sidebar: '#1a3d0c',
       accent: '#abd359'
@@ -168,6 +168,12 @@ export const useStore = create<StoreState>()(
           document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[schemeName].colors.sidebar);
           document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[schemeName].colors.accent);
           
+          // Set card background color - for ocean and forest make it slightly transparent white
+          // For dark themes, make it semi-transparent dark
+          const isDarkTheme = ['dracula', 'midnight'].includes(schemeName);
+          document.documentElement.style.setProperty('--card-bg-color', 
+            isDarkTheme ? 'rgba(30, 30, 40, 0.85)' : 'rgba(255, 255, 255, 0.9)');
+          
           // Also set the RGB variants for opacity calculations
           const hexToRgb = (hex: string) => {
             const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -211,6 +217,12 @@ export const useStore = create<StoreState>()(
           document.documentElement.style.setProperty('--text-color', COLOR_SCHEMES[colorScheme].colors.text);
           document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[colorScheme].colors.sidebar);
           document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[colorScheme].colors.accent);
+          
+          // Set card background color - for ocean and forest make it slightly transparent white
+          // For dark themes, make it semi-transparent dark
+          const isDarkTheme = ['dracula', 'midnight'].includes(colorScheme);
+          document.documentElement.style.setProperty('--card-bg-color', 
+            isDarkTheme ? 'rgba(30, 30, 40, 0.85)' : 'rgba(255, 255, 255, 0.9)');
           
           // Set RGB values for opacity calculations
           const hexToRgb = (hex: string) => {
