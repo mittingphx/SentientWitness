@@ -77,7 +77,7 @@ export default function ColorSchemeSelector() {
         </button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[725px]">
+      <DialogContent className="sm:max-w-[725px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Choose a Color Theme</DialogTitle>
           <DialogDescription>
@@ -117,12 +117,12 @@ export default function ColorSchemeSelector() {
           ))}
         </div>
         
-        <DialogFooter className="flex justify-between items-center">
+        <DialogFooter className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="text-xs text-gray-500">
             Page {currentPage + 1} of {themeGroups.length}
           </div>
-          <div>
-            <Button variant="outline" onClick={handleCancel} className="mr-2">Cancel</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCancel}>Cancel</Button>
             <Button onClick={handleSave}>Save Changes</Button>
           </div>
         </DialogFooter>
