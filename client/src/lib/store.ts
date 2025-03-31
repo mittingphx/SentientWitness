@@ -158,13 +158,26 @@ export const useStore = create<StoreState>()(
         if (COLOR_SCHEMES[schemeName]) {
           set({ colorScheme: schemeName });
           
-          // Optional: Persist color scheme through CSS variables
-          document.documentElement.style.setProperty('--primary-color', COLOR_SCHEMES[schemeName].colors.primary);
-          document.documentElement.style.setProperty('--secondary-color', COLOR_SCHEMES[schemeName].colors.secondary);
+          // Persist color scheme through CSS variables
+          const primaryColor = COLOR_SCHEMES[schemeName].colors.primary;
+          const secondaryColor = COLOR_SCHEMES[schemeName].colors.secondary;
+          document.documentElement.style.setProperty('--primary-color', primaryColor);
+          document.documentElement.style.setProperty('--secondary-color', secondaryColor);
           document.documentElement.style.setProperty('--background-color', COLOR_SCHEMES[schemeName].colors.background);
           document.documentElement.style.setProperty('--text-color', COLOR_SCHEMES[schemeName].colors.text);
           document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[schemeName].colors.sidebar);
           document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[schemeName].colors.accent);
+          
+          // Also set the RGB variants for opacity calculations
+          const hexToRgb = (hex: string) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? 
+              `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+              null;
+          };
+          
+          document.documentElement.style.setProperty('--primary-color-rgb', hexToRgb(primaryColor) || '0, 116, 232');
+          document.documentElement.style.setProperty('--secondary-color-rgb', hexToRgb(secondaryColor) || '0, 168, 168');
         }
       },
       
@@ -190,12 +203,25 @@ export const useStore = create<StoreState>()(
         
         // Apply current color scheme
         if (colorScheme && COLOR_SCHEMES[colorScheme]) {
-          document.documentElement.style.setProperty('--primary-color', COLOR_SCHEMES[colorScheme].colors.primary);
-          document.documentElement.style.setProperty('--secondary-color', COLOR_SCHEMES[colorScheme].colors.secondary);
+          const primaryColor = COLOR_SCHEMES[colorScheme].colors.primary;
+          const secondaryColor = COLOR_SCHEMES[colorScheme].colors.secondary;
+          document.documentElement.style.setProperty('--primary-color', primaryColor);
+          document.documentElement.style.setProperty('--secondary-color', secondaryColor);
           document.documentElement.style.setProperty('--background-color', COLOR_SCHEMES[colorScheme].colors.background);
           document.documentElement.style.setProperty('--text-color', COLOR_SCHEMES[colorScheme].colors.text);
           document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[colorScheme].colors.sidebar);
           document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[colorScheme].colors.accent);
+          
+          // Set RGB values for opacity calculations
+          const hexToRgb = (hex: string) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? 
+              `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+              null;
+          };
+          
+          document.documentElement.style.setProperty('--primary-color-rgb', hexToRgb(primaryColor) || '0, 116, 232');
+          document.documentElement.style.setProperty('--secondary-color-rgb', hexToRgb(secondaryColor) || '0, 168, 168');
         }
       },
       

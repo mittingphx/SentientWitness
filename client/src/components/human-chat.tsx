@@ -95,16 +95,16 @@ export default function HumanChat({
   }, [isVoiceActive, toast]);
   
   return (
-    <div className="flex flex-col h-full bg-teal-50">
-      <div className="p-3 border-b flex items-center justify-between bg-teal-100">
+    <div className="flex flex-col h-full" style={{backgroundColor: 'var(--human-bg)'}}>
+      <div className="p-3 border-b flex items-center justify-between" style={{backgroundColor: 'var(--human-header)'}}>
         <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-teal-800">Human Chat</h2>
+          <MessageCircle className="h-5 w-5" style={{color: 'var(--human-accent)'}} />
+          <h2 className="text-lg font-semibold" style={{color: 'var(--human-text)'}}>Human Chat</h2>
         </div>
         
         {setSendToAI && (
           <div className="flex items-center gap-2">
-            <label className="text-sm cursor-pointer text-teal-800" htmlFor="send-to-ai">
+            <label className="text-sm cursor-pointer" style={{color: 'var(--human-text)'}} htmlFor="send-to-ai">
               Send to AI
             </label>
             <input
@@ -118,20 +118,23 @@ export default function HumanChat({
         )}
       </div>
       
-      <ScrollArea className="flex-1 p-4 bg-teal-50">
+      <ScrollArea className="flex-1 p-4" style={{backgroundColor: 'var(--human-bg)'}}>
         <div className="space-y-4">
           {messages.filter(m => m.type === 'human').map((message) => (
-            <div key={message.id} className="chat-message bg-white rounded-lg p-3 shadow-sm border border-teal-100">
+            <div key={message.id} className="chat-message rounded-lg p-3 shadow-sm border" style={{
+              backgroundColor: 'white',
+              borderColor: 'rgba(var(--secondary-color-rgb), 0.2)'
+            }}>
               <div className="flex items-start gap-3">
                 <UserAvatar user={message.sender} />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-teal-800">{message.sender.displayName}</span>
-                    <span className="text-xs text-teal-600">
+                    <span className="font-semibold" style={{color: 'var(--human-text)'}}>{message.sender.displayName}</span>
+                    <span className="text-xs" style={{color: 'var(--human-accent)'}}>
                       {formatTimestamp(message.timestamp)}
                     </span>
                   </div>
-                  <div className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
+                  <div className="mt-1 text-sm whitespace-pre-wrap" style={{color: 'var(--text-color)'}}>
                     {message.content}
                   </div>
                 </div>
@@ -142,14 +145,17 @@ export default function HumanChat({
         </div>
       </ScrollArea>
       
-      <div className="p-3 border-t bg-teal-100">
+      <div className="p-3 border-t" style={{backgroundColor: 'var(--human-header)'}}>
         <div className="flex items-end gap-2">
           <Textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyPress}
             placeholder="Type your message..."
-            className="min-h-[80px] resize-none bg-white border-teal-200 focus:border-teal-400 focus:ring-teal-300"
+            className="min-h-[80px] resize-none bg-white"
+            style={{
+              borderColor: 'rgba(var(--secondary-color-rgb), 0.3)'
+            }}
           />
           
           <div className="flex flex-col gap-2">
@@ -157,7 +163,12 @@ export default function HumanChat({
               onClick={toggleVoice} 
               size="icon" 
               variant={isVoiceActive ? "default" : "outline"}
-              className={`rounded-full ${isVoiceActive ? 'bg-teal-600 hover:bg-teal-700' : 'bg-teal-100 text-teal-700 border-teal-300 hover:bg-teal-200'}`}
+              className="rounded-full"
+              style={{
+                backgroundColor: isVoiceActive ? 'var(--secondary-color)' : 'rgba(var(--secondary-color-rgb), 0.1)',
+                color: isVoiceActive ? 'white' : 'var(--secondary-color)',
+                borderColor: 'rgba(var(--secondary-color-rgb), 0.3)'
+              }}
               title={isVoiceActive ? "Stop voice input" : "Start voice input"}
             >
               {isVoiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -166,7 +177,11 @@ export default function HumanChat({
             <Button 
               onClick={handleSendMessage} 
               size="icon"
-              className="rounded-full bg-teal-600 hover:bg-teal-700"
+              className="rounded-full"
+              style={{
+                backgroundColor: 'var(--secondary-color)',
+                color: 'white'
+              }}
               disabled={!newMessage.trim() || !currentUser}
             >
               <Send className="h-4 w-4" />
@@ -175,7 +190,7 @@ export default function HumanChat({
         </div>
         
         {isVoiceActive && (
-          <div className="mt-2 bg-teal-200 p-2 rounded">
+          <div className="mt-2 p-2 rounded" style={{backgroundColor: 'rgba(var(--secondary-color-rgb), 0.15)'}}>
             <VoiceInput
               onTranscript={handleVoiceTranscript}
               autoSubmitAfterSilence
@@ -186,7 +201,7 @@ export default function HumanChat({
         )}
         
         {!currentUser && (
-          <p className="text-xs text-teal-700 mt-2 font-medium">
+          <p className="text-xs mt-2 font-medium" style={{color: 'var(--human-accent)'}}>
             Please connect to participate in the conversation
           </p>
         )}

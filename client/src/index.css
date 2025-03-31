@@ -13,23 +13,27 @@
   
   :root {
     /* Default Theme Variables (Ocean Theme) */
-    --primary-color: #0066cc;
-    --secondary-color: #009999;
-    --background-color: #e6f2ff;
+    --primary-color: #0074e8;  /* 10% brighter blue */
+    --secondary-color: #00a8a8; /* slightly brighter teal */
+    --background-color: #ecf5ff; /* slightly more washed out background */
     --text-color: #001133;
-    --sidebar-color: #000099;
+    --sidebar-color: #0055aa; /* more washed out, bit more green-tinted blue */
     --accent-color: #00ccff;
     
-    /* Chat message variables */
-    --ai-bg: theme('colors.blue.50');
-    --ai-header: theme('colors.blue.100');
-    --ai-text: theme('colors.blue.800');
-    --ai-accent: theme('colors.blue.600');
+    /* Chat message variables - these now reference the theme variables */
+    --ai-bg: rgba(var(--primary-color-rgb, 0, 116, 232), 0.05);
+    --ai-header: rgba(var(--primary-color-rgb, 0, 116, 232), 0.1);
+    --ai-text: var(--text-color, #001133);
+    --ai-accent: var(--primary-color, #0074e8);
     
-    --human-bg: theme('colors.teal.50');
-    --human-header: theme('colors.teal.100');
-    --human-text: theme('colors.teal.800');
-    --human-accent: theme('colors.teal.600');
+    --human-bg: rgba(var(--secondary-color-rgb, 0, 168, 168), 0.05);
+    --human-header: rgba(var(--secondary-color-rgb, 0, 168, 168), 0.1);
+    --human-text: var(--text-color, #001133);
+    --human-accent: var(--secondary-color, #00a8a8);
+    
+    /* RGB variants for opacity operations */
+    --primary-color-rgb: 0, 116, 232;
+    --secondary-color-rgb: 0, 168, 168;
   }
 }
 
