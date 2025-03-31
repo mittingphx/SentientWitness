@@ -32,13 +32,15 @@ interface DirectConnectionModalProps {
   onClose: () => void;
   projectId: string;
   onConnectionEstablished?: (peerId: string, peerName: string) => void;
+  onOpenShareModal?: () => void;
 }
 
 export default function DirectConnectionModal({ 
   isOpen, 
   onClose, 
   projectId,
-  onConnectionEstablished
+  onConnectionEstablished,
+  onOpenShareModal
 }: DirectConnectionModalProps) {
   const { toast } = useToast();
   
@@ -190,6 +192,14 @@ export default function DirectConnectionModal({
     });
   }, [toast]);
   
+  // Handle opening the share modal
+  const handleOpenShareModal = useCallback(() => {
+    if (onOpenShareModal) {
+      onClose();
+      onOpenShareModal();
+    }
+  }, [onOpenShareModal, onClose]);
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
@@ -298,7 +308,7 @@ export default function DirectConnectionModal({
                 </div>
                 
                 {!isWaiting ? (
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-3">
                     <Button
                       className="w-full"
                       onClick={handleHost}
@@ -306,6 +316,26 @@ export default function DirectConnectionModal({
                     >
                       <Users className="mr-2 h-4 w-4" />
                       Start Hosting
+                    </Button>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">
+                          Or use a shareable link
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleOpenShareModal}
+                    >
+                      <Link className="mr-2 h-4 w-4" />
+                      Create Shareable Link
                     </Button>
                   </div>
                 ) : (

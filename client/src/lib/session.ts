@@ -4,7 +4,7 @@ import { SessionUser, SessionProject, SessionMessage } from '@shared/schema';
 
 // Generate a unique session ID
 export function generateSessionId(): string {
-  return uuidv4().slice(0, 8);
+  return uuidv4();
 }
 
 // Create a new project session
@@ -31,7 +31,8 @@ export function createSession(
     sessionId,
     password: options.password,
     maxParticipants: options.maxParticipants,
-    participants: []
+    participants: [],
+    messages: []
   };
   
   return createProject(project);
@@ -110,7 +111,7 @@ export function getSessionBySessionId(sessionId: string): SessionProject | null 
 export function generateShareableUrl(sessionId: string): string {
   const host = window.location.host;
   const protocol = window.location.protocol;
-  return `${protocol}//${host}/join/${sessionId}`;
+  return `${protocol}//${host}/join-session/${sessionId}`;
 }
 
 // Send a message to a session

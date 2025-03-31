@@ -9,7 +9,7 @@ import ShareSessionModal from '@/components/share-session-modal';
 import ExportPersonalityModal from '@/components/export-personality-modal';
 import DirectConnectionModal from '@/components/direct-connection-modal';
 import { useSession } from '@/hooks/use-session';
-import { useWebSocketConnection } from '@/hooks/use-websocket-connection';
+import { useWebSocketConnection, WebSocketMessage } from '@/hooks/use-websocket-connection';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Users, 
@@ -47,23 +47,20 @@ export default function Project() {
   });
   
   // WebSocket connection for real-time updates
-  const { status: wsStatus, sendMessage: wsSendMessage } = useWebSocketConnection(
-    session?.sessionId,
-    {
-      onMessage: (data) => {
-        if (data.type === 'chat' && projectId) {
-          // Handle incoming message if not from the current user
-          if (data.userId !== currentUser?.id) {
-            // Find the sender from participants
-            const sender = participants.find(p => p.id === data.userId);
-            if (sender) {
-              sendMessage(data.content, data.messageType as 'ai' | 'human');
-            }
+  const { status: wsStatus, sendMessage: wsSendMessage } = useWebSocketConnection({
+    onMessage: (data: WebSocketMessage) => {
+      if (data.type === 'chat' && projectId) {
+        // Handle incoming message if not from the current user
+        if (data.userId !== currentUser?.id) {
+          // Find the sender from participants
+          const sender = participants.find(p => p.id === data.userId);
+          if (sender) {
+            sendMessage(data.content, data.messageType as 'ai' | 'human');
           }
         }
       }
     }
-  );
+  });
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
@@ -249,6 +246,7 @@ export default function Project() {
         isOpen={isDirectConnectionModalOpen}
         onClose={() => setIsDirectConnectionModalOpen(false)}
         projectId={projectIdStr}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
         onConnectionEstablished={(peerId, peerName) => {
           // Add to connected peers
           setConnectedPeers(prev => [...prev, { id: peerId, name: peerName }]);

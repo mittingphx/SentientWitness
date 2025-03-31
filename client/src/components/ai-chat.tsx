@@ -179,7 +179,7 @@ export default function AIChat({
                         )}
                       </Button>
                     </div>
-                    <div className="mt-1 text-sm whitespace-pre-wrap">
+                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
                       {message.content}
                     </div>
                   </div>
