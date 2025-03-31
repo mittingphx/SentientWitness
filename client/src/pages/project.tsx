@@ -127,10 +127,10 @@ export default function Project() {
   };
   
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100 dark:bg-dark-400 text-gray-900 dark:text-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-teal-50 text-gray-900">
       {/* Mobile sidebar toggle */}
       <button
-        className="md:hidden fixed top-4 left-4 z-20 bg-white dark:bg-dark-300 p-2 rounded-lg shadow-md"
+        className="md:hidden fixed top-4 left-4 z-20 bg-white p-2 rounded-lg shadow-md"
         onClick={toggleSidebar}
       >
         {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -139,7 +139,7 @@ export default function Project() {
       {/* Sidebar */}
       <div className={`${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } fixed inset-0 md:relative md:translate-x-0 z-10 w-64 transition-transform duration-300 ease-in-out`}>
+      } fixed inset-0 md:relative md:translate-x-0 z-10 w-64 transition-transform duration-300 ease-in-out bg-gradient-to-b from-blue-700 to-blue-900 text-white`}>
         <Sidebar 
           isMobile={true} 
           onToggle={toggleSidebar} 
@@ -148,52 +148,52 @@ export default function Project() {
       </div>
       
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-dark-400">
+      <main className="flex-1 flex flex-col overflow-hidden bg-white shadow-lg">
         {/* Top Header */}
-        <header className="bg-white dark:bg-dark-300 border-b border-gray-200 dark:border-dark-100 h-14 flex items-center px-4 justify-between">
+        <header className="bg-gradient-to-r from-blue-600 to-teal-500 border-b border-blue-400 h-14 flex items-center px-4 justify-between text-white">
           <div className="flex items-center">
-            <button className="md:hidden mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white" onClick={toggleSidebar}>
+            <button className="md:hidden mr-4 text-white hover:text-blue-100" onClick={toggleSidebar}>
               <Menu className="h-5 w-5" />
             </button>
             <h2 className="font-semibold">{session?.name || 'Loading...'}</h2>
-            <div className="ml-4 flex items-center text-gray-500 dark:text-gray-400 text-sm">
-              <span className="inline-block w-2 h-2 rounded-full bg-success mr-1.5"></span>
+            <div className="ml-4 flex items-center text-white/80 text-sm">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-300 mr-1.5"></span>
               <span>{participants.length} participants connected</span>
             </div>
           </div>
           
           <div className="flex items-center space-x-3">
             <button 
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
+              className="text-sm text-white hover:text-blue-100 flex items-center"
               onClick={() => setIsExportModalOpen(true)}
             >
               <Users className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Participants</span>
             </button>
             <button 
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
+              className="text-sm text-white hover:text-blue-100 flex items-center"
               onClick={() => setIsShareModalOpen(true)}
             >
               <LinkIcon className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Share</span>
             </button>
             <button 
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
+              className="text-sm text-white hover:text-blue-100 flex items-center"
               onClick={() => setIsDirectConnectionModalOpen(true)}
             >
               <Network className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Direct Connect</span>
             </button>
             <button 
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
+              className="text-sm text-white hover:text-blue-100 flex items-center"
             >
               <Settings className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Settings</span>
             </button>
             <Button 
               size="icon"
-              variant="ghost"
-              className="ml-2 p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+              variant="secondary"
+              className="ml-2 p-1.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
               onClick={handleAddAI}
             >
               <Plus className="h-4 w-4" />

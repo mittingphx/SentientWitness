@@ -10,4 +10,41 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  
+  :root {
+    --ai-bg: theme('colors.blue.50');
+    --ai-header: theme('colors.blue.100');
+    --ai-text: theme('colors.blue.800');
+    --ai-accent: theme('colors.blue.600');
+    
+    --human-bg: theme('colors.teal.50');
+    --human-header: theme('colors.teal.100');
+    --human-text: theme('colors.teal.800');
+    --human-accent: theme('colors.teal.600');
+  }
+}
+
+@layer components {
+  /* Improve text contrast throughout the app */
+  .text-muted-foreground {
+    @apply text-gray-600 dark:text-gray-300;
+  }
+  
+  /* Button styles with improved contrast */
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white;
+  }
+  
+  .btn-secondary {
+    @apply bg-teal-600 hover:bg-teal-700 text-white;
+  }
+  
+  /* Message bubble styles */
+  .chat-message {
+    @apply rounded-lg shadow-sm transition-all duration-200;
+  }
+  
+  .chat-message:hover {
+    @apply shadow-md;
+  }
 }

@@ -114,13 +114,13 @@ export default function AIChat({
   }, [aiMessages, projectId, toast]);
   
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-3 border-b flex items-center justify-between">
+    <div className="flex flex-col h-full bg-blue-50">
+      <div className="p-3 border-b flex items-center justify-between bg-blue-100">
         <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">AI Chat</h2>
+          <Bot className="h-5 w-5 text-blue-600" />
+          <h2 className="text-lg font-semibold text-blue-800">AI Chat</h2>
           {connectedAIs.length > 0 && (
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">
               {connectedAIs.length} AI{connectedAIs.length !== 1 ? 's' : ''} connected
             </span>
           )}
@@ -131,36 +131,36 @@ export default function AIChat({
           size="sm" 
           onClick={exportConversation}
           disabled={aiMessages.length === 0}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 bg-blue-200 text-blue-800 border-blue-300 hover:bg-blue-300"
         >
           <Download className="h-4 w-4" />
           <span className="hidden sm:inline">Export</span>
         </Button>
       </div>
       
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4 bg-blue-50">
         <div className="space-y-4">
           {aiMessages.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">
-              <Bot className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p>No AI messages yet</p>
-              <p className="text-sm mt-2">
+            <div className="text-center p-8 text-blue-600 bg-blue-100 rounded-lg">
+              <Bot className="h-12 w-12 mx-auto mb-4 opacity-60 text-blue-500" />
+              <p className="text-blue-800 font-medium">No AI messages yet</p>
+              <p className="text-sm mt-2 text-blue-700">
                 Connect an AI or wait for an AI to join the conversation.
               </p>
             </div>
           ) : (
             aiMessages.map((message) => (
-              <div key={message.id} className="chat-message">
+              <div key={message.id} className="chat-message bg-white rounded-lg p-3 shadow-sm border border-blue-100">
                 <div className="flex items-start gap-3">
                   <UserAvatar user={message.sender} />
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">{message.sender.displayName}</span>
-                        <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                        <span className="font-semibold text-blue-800">{message.sender.displayName}</span>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
                           {message.sender.aiModel}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-blue-600">
                           {formatTimestamp(message.timestamp)}
                         </span>
                       </div>
@@ -168,7 +168,7 @@ export default function AIChat({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 w-7 p-0 rounded-full"
+                        className="h-7 w-7 p-0 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-800"
                         onClick={() => handleToggleSpeech(message)}
                         title={currentSpeakingId === message.id ? "Stop speaking" : "Speak this message"}
                       >
@@ -179,7 +179,7 @@ export default function AIChat({
                         )}
                       </Button>
                     </div>
-                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                    <div className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
                       {message.content}
                     </div>
                   </div>
@@ -188,8 +188,8 @@ export default function AIChat({
             ))
           )}
           {isGenerating && (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-4 bg-blue-100 rounded-lg text-blue-800">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               <span className="ml-2">AI is thinking...</span>
             </div>
           )}
