@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore, COLOR_SCHEMES } from '@/lib/store';
 import {
   Dialog,
@@ -15,11 +15,25 @@ export default function ColorSchemeSelector() {
   const { colorScheme, setColorScheme } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedScheme, setSelectedScheme] = useState(colorScheme);
+  const [currentPage, setCurrentPage] = useState(0);
+  
+  // Define theme groups (6 themes per page)
+  const themeGroups = useMemo(() => {
+    const themes = Object.entries(COLOR_SCHEMES);
+    return [
+      themes.slice(0, 6),  // First 6 themes (original)
+      themes.slice(6, 12)   // Next 6 themes (new)
+    ];
+  }, []);
 
   const handleOpenChange = (open: boolean) => {
     if (open) {
       // When opening the dialog, start with the current scheme
       setSelectedScheme(colorScheme);
+      
+      // Set the current page based on where the selected theme is
+      const themeIndex = Object.keys(COLOR_SCHEMES).findIndex(key => key === colorScheme);
+      setCurrentPage(themeIndex >= 6 ? 1 : 0);
     }
     setIsOpen(open);
   };
@@ -33,6 +47,10 @@ export default function ColorSchemeSelector() {
     setIsOpen(false);
     // Reset to current scheme
     setSelectedScheme(colorScheme);
+  };
+  
+  const goToPage = (pageIndex: number) => {
+    setCurrentPage(pageIndex);
   };
 
   return (
@@ -67,8 +85,28 @@ export default function ColorSchemeSelector() {
           </DialogDescription>
         </DialogHeader>
         
+        {/* Page navigation */}
+        <div className="flex justify-center space-x-2 mb-2">
+          <button 
+            onClick={() => goToPage(0)}
+            className={`px-3 py-1 rounded text-sm ${currentPage === 0 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+          >
+            Classic Themes
+          </button>
+          <button 
+            onClick={() => goToPage(1)}
+            className={`px-3 py-1 rounded text-sm ${currentPage === 1 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+          >
+            Modern Themes
+          </button>
+        </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4">
-          {Object.entries(COLOR_SCHEMES).map(([key, scheme]) => (
+          {themeGroups[currentPage].map(([key, scheme]) => (
             <ThemePreviewCard 
               key={key} 
               schemeKey={key} 
@@ -79,9 +117,14 @@ export default function ColorSchemeSelector() {
           ))}
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+        <DialogFooter className="flex justify-between items-center">
+          <div className="text-xs text-gray-500">
+            Page {currentPage + 1} of {themeGroups.length}
+          </div>
+          <div>
+            <Button variant="outline" onClick={handleCancel} className="mr-2">Cancel</Button>
+            <Button onClick={handleSave}>Save Changes</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

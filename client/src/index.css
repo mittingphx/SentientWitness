@@ -140,11 +140,62 @@
   }
   
   /* Smaller themed gradient overlays for the theme selector previews */
+  /* Original Themes */
   .theme-preview-card .ocean-theme .theme-bg {
     background-image: linear-gradient(to bottom, rgba(0, 85, 170, 0.05), rgba(0, 85, 170, 0.03));
   }
   
   .theme-preview-card .forest-theme .theme-bg {
     background-image: linear-gradient(to bottom, rgba(26, 61, 12, 0.04), rgba(26, 61, 12, 0.02));
+  }
+  
+  /* New Themes */
+  .theme-preview-card .nordic-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(59, 66, 82, 0.05), rgba(59, 66, 82, 0.03));
+  }
+  
+  .theme-preview-card .cherry-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(136, 14, 79, 0.05), rgba(136, 14, 79, 0.03));
+  }
+  
+  .theme-preview-card .mint-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(0, 105, 92, 0.05), rgba(0, 105, 92, 0.03));
+  }
+  
+  .theme-preview-card .amber-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(230, 81, 0, 0.05), rgba(230, 81, 0, 0.03));
+  }
+  
+  .theme-preview-card .plum-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(74, 20, 140, 0.05), rgba(74, 20, 140, 0.03));
+  }
+  
+  /* Main app themes */
+  .ocean-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(0, 85, 170, 0.05), rgba(0, 85, 170, 0.03));
+  }
+  
+  .forest-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(26, 61, 12, 0.04), rgba(26, 61, 12, 0.02));
+  }
+  
+  .nordic-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(59, 66, 82, 0.05), rgba(59, 66, 82, 0.03));
+  }
+  
+  .cherry-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(136, 14, 79, 0.05), rgba(136, 14, 79, 0.03));
+  }
+  
+  .mint-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(0, 105, 92, 0.05), rgba(0, 105, 92, 0.03));
+  }
+  
+  .amber-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(230, 81, 0, 0.05), rgba(230, 81, 0, 0.03));
+  }
+  
+  .plum-theme .theme-bg {
+    background-image: linear-gradient(to bottom, rgba(74, 20, 140, 0.05), rgba(74, 20, 140, 0.03));
   }
 }

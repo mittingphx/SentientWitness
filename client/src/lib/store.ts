@@ -22,14 +22,15 @@ export type ColorScheme = {
 };
 
 export const COLOR_SCHEMES: Record<string, ColorScheme> = {
+  // Original 6 Themes
   'ocean': {
     name: 'Ocean',
     colors: {
-      primary: '#0074e8',  // 10% brighter blue
-      secondary: '#00a8a8', // slightly brighter teal
-      background: '#ecf5ff', // Original background
+      primary: '#0074e8',
+      secondary: '#00a8a8',
+      background: '#ecf5ff',
       text: '#001133',
-      sidebar: '#0055aa', // more washed out, bit more green-tinted blue
+      sidebar: '#0055aa',
       accent: '#00ccff'
     }
   },
@@ -49,7 +50,7 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
     colors: {
       primary: '#2c5e1a',
       secondary: '#77a61d',
-      background: '#f0f7e9', // Original background
+      background: '#f0f7e9',
       text: '#1e3d12',
       sidebar: '#1a3d0c',
       accent: '#abd359'
@@ -86,6 +87,74 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
       text: '#3d405b',
       sidebar: '#3d405b',
       accent: '#f8961e'
+    }
+  },
+  
+  // 6 New Themes
+  'nordic': {
+    name: 'Nordic',
+    colors: {
+      primary: '#5E81AC',
+      secondary: '#81A1C1',
+      background: '#ECEFF4',
+      text: '#2E3440',
+      sidebar: '#3B4252',
+      accent: '#88C0D0'
+    }
+  },
+  'cherry': {
+    name: 'Cherry',
+    colors: {
+      primary: '#D81B60',
+      secondary: '#F06292',
+      background: '#FFF0F3',
+      text: '#4A0012',
+      sidebar: '#880E4F',
+      accent: '#FF80AB'
+    }
+  },
+  'mint': {
+    name: 'Mint',
+    colors: {
+      primary: '#00897B',
+      secondary: '#26A69A',
+      background: '#E0F2F1',
+      text: '#004D40',
+      sidebar: '#00695C',
+      accent: '#64FFDA'
+    }
+  },
+  'nightfall': {
+    name: 'Nightfall',
+    colors: {
+      primary: '#546E7A',
+      secondary: '#78909C',
+      background: '#263238',
+      text: '#ECEFF1',
+      sidebar: '#37474F',
+      accent: '#B0BEC5'
+    }
+  },
+  'amber': {
+    name: 'Amber',
+    colors: {
+      primary: '#FF8F00',
+      secondary: '#FFA726',
+      background: '#FFF8E1',
+      text: '#663C00',
+      sidebar: '#E65100',
+      accent: '#FFD54F'
+    }
+  },
+  'plum': {
+    name: 'Plum',
+    colors: {
+      primary: '#6A1B9A',
+      secondary: '#8E24AA',
+      background: '#F3E5F5',
+      text: '#3E2465',
+      sidebar: '#4A148C',
+      accent: '#E040FB'
     }
   }
 };
@@ -168,9 +237,9 @@ export const useStore = create<StoreState>()(
           document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[schemeName].colors.sidebar);
           document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[schemeName].colors.accent);
           
-          // Set card background color - for ocean and forest make it slightly transparent white
+          // Set card background color - for light themes make it slightly transparent white
           // For dark themes, make it semi-transparent dark
-          const isDarkTheme = ['dracula', 'midnight'].includes(schemeName);
+          const isDarkTheme = ['dracula', 'midnight', 'nightfall'].includes(schemeName);
           document.documentElement.style.setProperty('--card-bg-color', 
             isDarkTheme ? 'rgba(30, 30, 40, 0.85)' : 'rgba(255, 255, 255, 0.9)');
           
@@ -186,7 +255,10 @@ export const useStore = create<StoreState>()(
           document.documentElement.style.setProperty('--secondary-color-rgb', hexToRgb(secondaryColor) || '0, 168, 168');
           
           // Add theme class to body for additional CSS targeting
-          document.body.classList.remove('ocean-theme', 'forest-theme', 'dracula-theme', 'midnight-theme', 'sunset-theme', 'retro-theme');
+          document.body.classList.remove(
+            'ocean-theme', 'forest-theme', 'dracula-theme', 'midnight-theme', 'sunset-theme', 'retro-theme',
+            'nordic-theme', 'cherry-theme', 'mint-theme', 'nightfall-theme', 'amber-theme', 'plum-theme'
+          );
           document.body.classList.add(`${schemeName}-theme`);
         }
       },
@@ -222,9 +294,9 @@ export const useStore = create<StoreState>()(
           document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[colorScheme].colors.sidebar);
           document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[colorScheme].colors.accent);
           
-          // Set card background color - for ocean and forest make it slightly transparent white
+          // Set card background color - for light themes make it slightly transparent white
           // For dark themes, make it semi-transparent dark
-          const isDarkTheme = ['dracula', 'midnight'].includes(colorScheme);
+          const isDarkTheme = ['dracula', 'midnight', 'nightfall'].includes(colorScheme);
           document.documentElement.style.setProperty('--card-bg-color', 
             isDarkTheme ? 'rgba(30, 30, 40, 0.85)' : 'rgba(255, 255, 255, 0.9)');
           
@@ -240,7 +312,10 @@ export const useStore = create<StoreState>()(
           document.documentElement.style.setProperty('--secondary-color-rgb', hexToRgb(secondaryColor) || '0, 168, 168');
           
           // Add theme class to body for additional CSS targeting
-          document.body.classList.remove('ocean-theme', 'forest-theme', 'dracula-theme', 'midnight-theme', 'sunset-theme', 'retro-theme');
+          document.body.classList.remove(
+            'ocean-theme', 'forest-theme', 'dracula-theme', 'midnight-theme', 'sunset-theme', 'retro-theme',
+            'nordic-theme', 'cherry-theme', 'mint-theme', 'nightfall-theme', 'amber-theme', 'plum-theme'
+          );
           document.body.classList.add(`${colorScheme}-theme`);
         }
       },
