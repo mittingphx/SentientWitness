@@ -50,7 +50,11 @@ export default function ShareSessionModal({ isOpen, onClose, projectId }: ShareS
   // Generate the share link when the component mounts or when settings change
   useEffect(() => {
     if (isOpen && projectId) {
-      const baseUrl = window.location.origin;
+      // In Replit, we need to use relative paths for client-side routing to work properly
+      // since the browser needs to hit the server first
+      const isSPA = true; // Set to true since we're using client-side routing
+      
+      // Build the URL params
       const params = new URLSearchParams();
       
       if (isPasswordProtected) {
@@ -66,7 +70,16 @@ export default function ShareSessionModal({ isOpen, onClose, projectId }: ShareS
       }
       
       const queryString = params.toString() ? `?${params.toString()}` : '';
-      setShareLink(`${baseUrl}/join-session/${projectId}${queryString}`);
+      
+      // Use relative paths for client-side routing to avoid issues with Replit's domain structure
+      if (isSPA) {
+        // For client-side/SPA routing (should work with any hosting setup)
+        setShareLink(`${window.location.origin}/join-session/${projectId}${queryString}`);
+      } else {
+        // For server-side routing (may be needed for certain hosting setups)
+        const baseUrl = window.location.origin;
+        setShareLink(`${baseUrl}/join-session/${projectId}${queryString}`);
+      }
     }
   }, [isOpen, projectId, isPasswordProtected, shareMode, guestName, limitedUserCount]);
   

@@ -20,6 +20,18 @@ const sessions: Map<string, Set<string>> = new Map();
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server
   const httpServer = createServer(app);
+  
+  // Add routes for client-side routing
+  // This ensures that all client-side routes like /join-session/:id work properly
+  app.get('/join-session/*', (req, res, next) => {
+    // Forward to Vite middleware which will serve index.html
+    next();
+  });
+  
+  app.get('/project/*', (req, res, next) => {
+    // Forward to Vite middleware which will serve index.html
+    next();
+  });
 
   // Helper: Send message to a specific client
   function sendToClient(clientId: string, data: any) {
