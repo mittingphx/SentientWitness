@@ -8,6 +8,88 @@ import {
   AIPersonality
 } from '../shared/schema';
 
+// Available color schemes
+export type ColorScheme = {
+  name: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    background: string;
+    text: string;
+    sidebar: string;
+    accent: string;
+  }
+};
+
+export const COLOR_SCHEMES: Record<string, ColorScheme> = {
+  'ocean': {
+    name: 'Ocean',
+    colors: {
+      primary: '#0066cc',
+      secondary: '#009999',
+      background: '#e6f2ff',
+      text: '#001133',
+      sidebar: '#000099',
+      accent: '#00ccff'
+    }
+  },
+  'dracula': {
+    name: 'Dracula',
+    colors: {
+      primary: '#bd93f9',
+      secondary: '#ff79c6',
+      background: '#282a36',
+      text: '#f8f8f2',
+      sidebar: '#44475a',
+      accent: '#50fa7b'
+    }
+  },
+  'forest': {
+    name: 'Forest',
+    colors: {
+      primary: '#2c5e1a',
+      secondary: '#77a61d',
+      background: '#f0f7e9',
+      text: '#1e3d12',
+      sidebar: '#1a3d0c',
+      accent: '#abd359'
+    }
+  },
+  'sunset': {
+    name: 'Sunset',
+    colors: {
+      primary: '#e84a5f',
+      secondary: '#ff847c',
+      background: '#feceab',
+      text: '#2a363b',
+      sidebar: '#99464e',
+      accent: '#ff9966'
+    }
+  },
+  'midnight': {
+    name: 'Midnight',
+    colors: {
+      primary: '#7400b8',
+      secondary: '#5e60ce',
+      background: '#111133',
+      text: '#e9ecef',
+      sidebar: '#240046',
+      accent: '#80ffdb'
+    }
+  },
+  'retro': {
+    name: 'Retro',
+    colors: {
+      primary: '#f9c74f',
+      secondary: '#90be6d',
+      background: '#f8f9fa',
+      text: '#3d405b',
+      sidebar: '#3d405b',
+      accent: '#f8961e'
+    }
+  }
+};
+
 // Define the store state
 interface StoreState {
   // Authentication
@@ -26,6 +108,10 @@ interface StoreState {
   
   // API Keys
   apiKeys: Record<string, string>;
+  
+  // UI Preferences
+  colorScheme: string; // Key to COLOR_SCHEMES
+  setColorScheme: (schemeName: string) => void;
   
   // Actions
   initializeStore: () => void;
@@ -65,10 +151,26 @@ export const useStore = create<StoreState>()(
       messages: {},
       personalities: {},
       apiKeys: {},
+      colorScheme: 'ocean', // Default color scheme
+      
+      // Color scheme action
+      setColorScheme: (schemeName) => {
+        if (COLOR_SCHEMES[schemeName]) {
+          set({ colorScheme: schemeName });
+          
+          // Optional: Persist color scheme through CSS variables
+          document.documentElement.style.setProperty('--primary-color', COLOR_SCHEMES[schemeName].colors.primary);
+          document.documentElement.style.setProperty('--secondary-color', COLOR_SCHEMES[schemeName].colors.secondary);
+          document.documentElement.style.setProperty('--background-color', COLOR_SCHEMES[schemeName].colors.background);
+          document.documentElement.style.setProperty('--text-color', COLOR_SCHEMES[schemeName].colors.text);
+          document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[schemeName].colors.sidebar);
+          document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[schemeName].colors.accent);
+        }
+      },
       
       // Initialize with some default data if needed
       initializeStore: () => {
-        const { currentUser, users } = get();
+        const { currentUser, users, colorScheme } = get();
         
         // Create a default user if none exists
         if (!currentUser) {
@@ -84,6 +186,16 @@ export const useStore = create<StoreState>()(
             currentUser: defaultUser,
             users: { ...users, [defaultUser.id]: defaultUser }
           });
+        }
+        
+        // Apply current color scheme
+        if (colorScheme && COLOR_SCHEMES[colorScheme]) {
+          document.documentElement.style.setProperty('--primary-color', COLOR_SCHEMES[colorScheme].colors.primary);
+          document.documentElement.style.setProperty('--secondary-color', COLOR_SCHEMES[colorScheme].colors.secondary);
+          document.documentElement.style.setProperty('--background-color', COLOR_SCHEMES[colorScheme].colors.background);
+          document.documentElement.style.setProperty('--text-color', COLOR_SCHEMES[colorScheme].colors.text);
+          document.documentElement.style.setProperty('--sidebar-color', COLOR_SCHEMES[colorScheme].colors.sidebar);
+          document.documentElement.style.setProperty('--accent-color', COLOR_SCHEMES[colorScheme].colors.accent);
         }
       },
       
@@ -306,6 +418,7 @@ export const useStore = create<StoreState>()(
         personalities: state.personalities,
         apiKeys: state.apiKeys,
         currentUser: state.currentUser,
+        colorScheme: state.colorScheme,
       }),
     }
   )
