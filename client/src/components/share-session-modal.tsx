@@ -12,7 +12,9 @@ import {
   Lock,
   Shield,
   EyeOff,
-  Loader2
+  Loader2,
+  Users,
+  User
 } from 'lucide-react';
 import {
   Dialog,
@@ -23,6 +25,8 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { generateFunnyName } from '@/lib/name-generator';
 
 interface ShareSessionModalProps {
   isOpen: boolean;
@@ -39,22 +43,37 @@ export default function ShareSessionModal({ isOpen, onClose, projectId }: ShareS
   const [password, setPassword] = useState<string>('');
   const [isCreatingLink, setIsCreatingLink] = useState<boolean>(false);
   const [isLinkCopied, setIsLinkCopied] = useState<boolean>(false);
+  const [shareMode, setShareMode] = useState<string>('multi');
+  const [guestName, setGuestName] = useState<string>(generateFunnyName());
+  const [limitedUserCount, setLimitedUserCount] = useState<number>(1);
   
-  // Generate the share link when the component mounts
+  // Generate the share link when the component mounts or when settings change
   useEffect(() => {
     if (isOpen && projectId) {
       const baseUrl = window.location.origin;
-      setShareLink(`${baseUrl}/join-session/${projectId}${isPasswordProtected ? '?protected=true' : ''}`);
+      const params = new URLSearchParams();
+      
+      if (isPasswordProtected) {
+        params.append('protected', 'true');
+      }
+      
+      if (shareMode === 'single') {
+        params.append('mode', 'single');
+        params.append('name', encodeURIComponent(guestName));
+      } else if (shareMode === 'limited') {
+        params.append('mode', 'limited');
+        params.append('limit', limitedUserCount.toString());
+      }
+      
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      setShareLink(`${baseUrl}/join-session/${projectId}${queryString}`);
     }
-  }, [isOpen, projectId, isPasswordProtected]);
+  }, [isOpen, projectId, isPasswordProtected, shareMode, guestName, limitedUserCount]);
   
-  // Update the link when password protection changes
-  useEffect(() => {
-    if (shareLink) {
-      const baseUrl = window.location.origin;
-      setShareLink(`${baseUrl}/join-session/${projectId}${isPasswordProtected ? '?protected=true' : ''}`);
-    }
-  }, [isPasswordProtected, projectId]);
+  // Generate new random name
+  const generateNewName = useCallback(() => {
+    setGuestName(generateFunnyName());
+  }, []);
   
   // Handle copying the share link
   const handleCopyLink = useCallback(() => {
@@ -124,6 +143,101 @@ export default function ShareSessionModal({ isOpen, onClose, projectId }: ShareS
         </DialogHeader>
         
         <div className="space-y-4">
+          <Tabs defaultValue="multi" onValueChange={setShareMode} value={shareMode}>
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="multi" className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                <span>Multi-User</span>
+              </TabsTrigger>
+              <TabsTrigger value="limited" className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                <span>Limited</span>
+              </TabsTrigger>
+              <TabsTrigger value="single" className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                <span>Single User</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="multi">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-2 mb-2">
+                    <h3 className="text-sm font-medium">Multi-User Link</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Share with an unlimited number of users
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="limited">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Limited User Link</h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Limit the number of users who can join with this link
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="user-limit">Maximum number of users</Label>
+                        <Input 
+                          id="user-limit" 
+                          type="number" 
+                          min="1" 
+                          max="20"
+                          value={limitedUserCount}
+                          onChange={(e) => setLimitedUserCount(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="single">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Single User Link</h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Pre-assign a guest name for a specific user
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <Label htmlFor="guest-name">Guest Name</Label>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 px-2"
+                            onClick={generateNewName}
+                          >
+                            Generate New
+                          </Button>
+                        </div>
+                        <Input 
+                          id="guest-name" 
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                          className="mb-2"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          This link can only be used by one person and will pre-fill their name
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+          
           <Card>
             <CardContent className="pt-6">
               <div className="space-y-4">
@@ -211,8 +325,23 @@ export default function ShareSessionModal({ isOpen, onClose, projectId }: ShareS
                   Password-protected link
                 </span>
               ) : (
-                <span className="text-amber-500">
-                  Anyone with this link can join your session
+                <span className="text-amber-500 flex items-center gap-1">
+                  {shareMode === 'single' ? (
+                    <>
+                      <User className="h-3 w-3" />
+                      Single-user link for "{guestName}"
+                    </>
+                  ) : shareMode === 'limited' ? (
+                    <>
+                      <Users className="h-3 w-3" />
+                      Limited to {limitedUserCount} user{limitedUserCount > 1 ? 's' : ''}
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-3 w-3" />
+                      Anyone with this link can join your session
+                    </>
+                  )}
                 </span>
               )}
             </p>
