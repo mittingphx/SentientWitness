@@ -148,11 +148,14 @@ export default function Project() {
       </div>
       
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-white shadow-lg">
+      <main className="flex-1 flex flex-col overflow-hidden shadow-lg theme-bg">
         {/* Top Header */}
-        <header className="bg-gradient-to-r from-blue-600 to-teal-500 border-b border-blue-400 h-14 flex items-center px-4 justify-between text-white">
+        <header className="theme-header h-14 flex items-center px-4 justify-between text-white" style={{
+          background: `linear-gradient(to right, var(--primary-color), var(--secondary-color))`,
+          borderBottom: '1px solid rgba(255,255,255,0.2)'
+        }}>
           <div className="flex items-center">
-            <button className="md:hidden mr-4 text-white hover:text-blue-100" onClick={toggleSidebar}>
+            <button className="md:hidden mr-4 text-white hover:text-opacity-80" onClick={toggleSidebar}>
               <Menu className="h-5 w-5" />
             </button>
             <h2 className="font-semibold">{session?.name || 'Loading...'}</h2>
@@ -164,28 +167,28 @@ export default function Project() {
           
           <div className="flex items-center space-x-3">
             <button 
-              className="text-sm text-white hover:text-blue-100 flex items-center"
+              className="text-sm text-white hover:text-opacity-80 flex items-center"
               onClick={() => setIsExportModalOpen(true)}
             >
               <Users className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Participants</span>
             </button>
             <button 
-              className="text-sm text-white hover:text-blue-100 flex items-center"
+              className="text-sm text-white hover:text-opacity-80 flex items-center"
               onClick={() => setIsShareModalOpen(true)}
             >
               <LinkIcon className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Share</span>
             </button>
             <button 
-              className="text-sm text-white hover:text-blue-100 flex items-center"
+              className="text-sm text-white hover:text-opacity-80 flex items-center"
               onClick={() => setIsDirectConnectionModalOpen(true)}
             >
               <Network className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Direct Connect</span>
             </button>
             <button 
-              className="text-sm text-white hover:text-blue-100 flex items-center"
+              className="text-sm text-white hover:text-opacity-80 flex items-center"
             >
               <Settings className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">Settings</span>
@@ -193,7 +196,11 @@ export default function Project() {
             <Button 
               size="icon"
               variant="secondary"
-              className="ml-2 p-1.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
+              className="ml-2 p-1.5 rounded-lg transition-colors"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+              }}
               onClick={handleAddAI}
             >
               <Plus className="h-4 w-4" />
