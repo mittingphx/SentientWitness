@@ -183,32 +183,39 @@ export default function JoinSession() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-dark-400 p-4">
+    <div className="min-h-screen flex flex-col p-4 theme-bg" style={{backgroundColor: 'var(--background-color)'}}>
       <header className="max-w-md mx-auto w-full mb-8 mt-4">
         <Button
           variant="ghost"
           size="sm"
-          className="mb-4"
+          className="mb-4 theme-text"
+          style={{color: 'var(--text-color)'}}
           onClick={() => navigate('/')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to home
         </Button>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" 
+               style={{
+                 background: `linear-gradient(to right bottom, var(--primary-color), var(--secondary-color))`
+               }}>
             <Brain className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Join Session</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Connect to an existing Sentient Witness conversation</p>
+            <h1 className="text-2xl font-bold theme-text" style={{color: 'var(--text-color)'}}>Join Session</h1>
+            <p className="text-sm" style={{color: 'var(--primary-color)'}}>Connect to an existing Sentient Witness conversation</p>
           </div>
         </div>
       </header>
       
       <main className="flex-1 max-w-md mx-auto w-full">
-        <Card>
-          <CardHeader>
-            <CardTitle>Join Session</CardTitle>
-            <CardDescription>
+        <Card className="border" style={{borderColor: 'rgba(var(--primary-color-rgb), 0.2)'}}>
+          <CardHeader style={{
+            backgroundColor: 'rgba(var(--primary-color-rgb), 0.05)',
+            borderBottom: '1px solid rgba(var(--primary-color-rgb), 0.1)'
+          }}>
+            <CardTitle style={{color: 'var(--text-color)'}}>Join Session</CardTitle>
+            <CardDescription style={{color: 'var(--primary-color)'}}>
               Enter the session ID and optional password to join an existing conversation.
             </CardDescription>
           </CardHeader>
@@ -224,45 +231,66 @@ export default function JoinSession() {
                   disabled={!!sessionId || !!sessionInfo}
                 />
                 {!sessionInfo && !sessionId && (
-                  <Button onClick={handleCheckSession}>Check</Button>
+                  <Button 
+                    onClick={handleCheckSession}
+                    className="theme-button"
+                    style={{
+                      backgroundColor: 'var(--primary-color)',
+                      color: 'white'
+                    }}
+                  >Check</Button>
                 )}
               </div>
             </div>
             
             {sessionInfo && (
-              <div className="rounded-lg border p-3 bg-gray-50 dark:bg-dark-300">
+              <div className="rounded-lg border p-3" style={{
+                backgroundColor: 'rgba(var(--primary-color-rgb), 0.03)',
+                borderColor: 'rgba(var(--primary-color-rgb), 0.15)'
+              }}>
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-medium">{sessionInfo.name}</h3>
+                  <h3 className="font-medium" style={{color: 'var(--text-color)'}}>{sessionInfo.name}</h3>
                   
                   {/* Session badges */}
                   <div className="flex items-center gap-1">
                     {isPasswordRequired && (
-                      <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-xs px-2 py-0.5 rounded-full flex items-center">
+                      <div className="text-xs px-2 py-0.5 rounded-full flex items-center" style={{
+                        backgroundColor: 'rgba(var(--primary-color-rgb), 0.1)',
+                        color: 'var(--primary-color)'
+                      }}>
                         <Lock className="h-3 w-3 mr-1" /> Password Protected
                       </div>
                     )}
                     
                     {sessionMode === 'single' && (
-                      <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-0.5 rounded-full flex items-center">
+                      <div className="text-xs px-2 py-0.5 rounded-full flex items-center" style={{
+                        backgroundColor: 'rgba(var(--primary-color-rgb), 0.1)',
+                        color: 'var(--primary-color)'
+                      }}>
                         <User className="h-3 w-3 mr-1" /> Single-User Link
                       </div>
                     )}
                     
                     {sessionMode === 'limited' && (
-                      <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-0.5 rounded-full flex items-center">
+                      <div className="text-xs px-2 py-0.5 rounded-full flex items-center" style={{
+                        backgroundColor: 'rgba(var(--secondary-color-rgb), 0.1)',
+                        color: 'var(--secondary-color)'
+                      }}>
                         <Users className="h-3 w-3 mr-1" /> Limited Users
                       </div>
                     )}
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <p className="text-sm mb-3" style={{color: 'var(--text-color)'}}>
                   {sessionInfo.description || 'No description provided'}
                 </p>
                 
                 {/* Info about limited slots if applicable */}
                 {sessionMode === 'limited' && remainingSlots !== null && (
-                  <div className={`text-sm mb-3 ${remainingSlots > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <div className="text-sm mb-3" style={{
+                    color: remainingSlots > 0 ? 'var(--secondary-color)' : '#d94e4e'
+                  }}>
                     {remainingSlots > 0 ? (
                       <p>{remainingSlots} slot{remainingSlots !== 1 ? 's' : ''} remaining</p>
                     ) : (
@@ -273,7 +301,7 @@ export default function JoinSession() {
                 
                 {/* Special message for single user links */}
                 {sessionMode === 'single' && (
-                  <div className="text-sm mb-3 text-blue-600 dark:text-blue-400">
+                  <div className="text-sm mb-3" style={{color: 'var(--primary-color)'}}>
                     <p>This link is specifically for: <strong>{displayName}</strong></p>
                   </div>
                 )}
@@ -283,7 +311,10 @@ export default function JoinSession() {
                     <UserAvatar key={participant.id} user={participant} size="xs" />
                   ))}
                   {sessionInfo.participants.length > 5 && (
-                    <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-dark-100 flex items-center justify-center text-gray-600 dark:text-gray-400 text-xs">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs" style={{
+                      backgroundColor: 'rgba(var(--primary-color-rgb), 0.1)',
+                      color: 'var(--primary-color)'
+                    }}>
                       +{sessionInfo.participants.length - 5}
                     </div>
                   )}
@@ -312,6 +343,7 @@ export default function JoinSession() {
                     variant="ghost" 
                     size="sm" 
                     className="h-6 px-2 text-xs"
+                    style={{color: 'var(--primary-color)'}}
                     onClick={() => setDisplayName(generateFunnyName())}
                   >
                     Random Name
@@ -337,12 +369,21 @@ export default function JoinSession() {
             <Button
               variant="outline"
               onClick={() => navigate('/')}
+              style={{
+                borderColor: 'rgba(var(--primary-color-rgb), 0.3)',
+                color: 'var(--text-color)'
+              }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleJoinSession}
               disabled={isJoining || !customSessionId || (isPasswordRequired && !password) || !displayName}
+              className="theme-button"
+              style={{
+                backgroundColor: 'var(--primary-color)',
+                color: 'white'
+              }}
             >
               {isJoining ? "Joining..." : "Join Session"}
             </Button>

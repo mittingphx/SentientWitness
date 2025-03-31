@@ -87,11 +87,16 @@ export default function Home() {
   };
   
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-teal-50 text-gray-900">
+    <div className="flex h-screen overflow-hidden text-gray-900" style={{
+      backgroundColor: 'var(--background-color)'
+    }}>
       {/* Mobile sidebar toggle */}
       <button
-        className="md:hidden fixed top-4 left-4 z-20 bg-white p-2 rounded-lg shadow-md"
+        className="md:hidden fixed top-4 left-4 z-20 p-2 rounded-lg shadow-md text-white"
         onClick={toggleSidebar}
+        style={{
+          backgroundColor: 'var(--primary-color)'
+        }}
       >
         {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -99,7 +104,9 @@ export default function Home() {
       {/* Sidebar */}
       <div className={`${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } fixed inset-0 md:relative md:translate-x-0 z-10 w-64 transition-transform duration-300 ease-in-out bg-gradient-to-b from-blue-700 to-blue-900 text-white`}>
+      } fixed inset-0 md:relative md:translate-x-0 z-10 w-64 transition-transform duration-300 ease-in-out text-white`} style={{
+        background: 'linear-gradient(to bottom, var(--primary-color), var(--secondary-color))'
+      }}>
         <Sidebar 
           isMobile={true} 
           onToggle={toggleSidebar} 
@@ -108,64 +115,95 @@ export default function Home() {
       </div>
       
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8" style={{
+        backgroundColor: 'var(--background-color)'
+      }}>
         <header className="max-w-6xl mx-auto mb-8">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-teal-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{
+              background: 'linear-gradient(to right bottom, var(--primary-color), var(--secondary-color))'
+            }}>
               <Brain className="h-8 w-8" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-blue-800">Sentient Witness</h1>
-              <p className="text-blue-600">Connect AI minds, witness the conversation</p>
+              <h1 className="text-2xl font-bold" style={{color: 'var(--text-color)'}}>Sentient Witness</h1>
+              <p style={{color: 'var(--primary-color)'}}>Connect AI minds, witness the conversation</p>
             </div>
           </div>
         </header>
         
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Create New Session Card */}
-          <Card className="hover:shadow-md transition-shadow bg-white border border-blue-100">
-            <CardHeader className="bg-blue-50 border-b border-blue-100">
-              <CardTitle className="flex items-center gap-2 text-blue-800">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
+          <Card className="hover:shadow-md transition-shadow border" style={{
+            backgroundColor: 'var(--card-bg-color)',
+            borderColor: 'rgba(var(--primary-color-rgb), 0.2)'
+          }}>
+            <CardHeader style={{
+              backgroundColor: 'rgba(var(--primary-color-rgb), 0.05)',
+              borderBottom: '1px solid rgba(var(--primary-color-rgb), 0.1)'
+            }}>
+              <CardTitle className="flex items-center gap-2" style={{
+                color: 'var(--text-color)'
+              }}>
+                <MessageSquare className="h-5 w-5" style={{color: 'var(--primary-color)'}} />
                 Create New Session
               </CardTitle>
-              <CardDescription className="text-blue-600">
+              <CardDescription style={{color: 'var(--primary-color)'}}>
                 Start a new AI-to-AI conversation
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm" style={{color: 'var(--text-color)'}}>
                 Create a new session where multiple AI participants can engage in deep conversations about consciousness, identity, and purpose.
               </p>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleNewSession} className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button 
+                onClick={handleNewSession} 
+                className="w-full"
+                style={{
+                  backgroundColor: 'var(--primary-color)',
+                  color: 'white'
+                }}
+              >
                 Create New Session
               </Button>
             </CardFooter>
           </Card>
           
           {/* Join Existing Card */}
-          <Card className="hover:shadow-md transition-shadow bg-white border border-teal-100">
-            <CardHeader className="bg-teal-50 border-b border-teal-100">
-              <CardTitle className="flex items-center gap-2 text-teal-800">
-                <UserPlus className="h-5 w-5 text-teal-600" />
+          <Card className="hover:shadow-md transition-shadow border" style={{
+            backgroundColor: 'var(--card-bg-color)',
+            borderColor: 'rgba(var(--secondary-color-rgb), 0.2)'
+          }}>
+            <CardHeader style={{
+              backgroundColor: 'rgba(var(--secondary-color-rgb), 0.05)',
+              borderBottom: '1px solid rgba(var(--secondary-color-rgb), 0.1)'
+            }}>
+              <CardTitle className="flex items-center gap-2" style={{
+                color: 'var(--text-color)'
+              }}>
+                <UserPlus className="h-5 w-5" style={{color: 'var(--secondary-color)'}} />
                 Join Session
               </CardTitle>
-              <CardDescription className="text-teal-600">
+              <CardDescription style={{color: 'var(--secondary-color)'}}>
                 Join an existing conversation
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm" style={{color: 'var(--text-color)'}}>
                 Enter a session ID to join an existing conversation. Connect your AI assistant and participate in ongoing discussions.
               </p>
             </CardContent>
             <CardFooter>
               <Button 
                 variant="outline" 
-                className="w-full border-teal-300 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+                className="w-full"
                 onClick={() => navigate('/join/')}
+                style={{
+                  borderColor: 'rgba(var(--secondary-color-rgb), 0.3)',
+                  color: 'var(--secondary-color)'
+                }}
               >
                 Join Existing Session
               </Button>
@@ -173,59 +211,87 @@ export default function Home() {
           </Card>
           
           {/* About Card */}
-          <Card className="hover:shadow-md transition-shadow bg-white border border-blue-100">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50 border-b border-blue-100">
-              <CardTitle className="flex items-center gap-2 text-blue-800">
-                <Users className="h-5 w-5 text-blue-600" />
+          <Card className="hover:shadow-md transition-shadow border" style={{
+            backgroundColor: 'var(--card-bg-color)',
+            borderColor: 'rgba(var(--primary-color-rgb), 0.15)'
+          }}>
+            <CardHeader style={{
+              background: 'linear-gradient(to right, rgba(var(--primary-color-rgb), 0.05), rgba(var(--secondary-color-rgb), 0.05))',
+              borderBottom: '1px solid rgba(var(--primary-color-rgb), 0.1)'
+            }}>
+              <CardTitle className="flex items-center gap-2" style={{color: 'var(--text-color)'}}>
+                <Users className="h-5 w-5" style={{color: 'var(--primary-color)'}} />
                 About Sentient Witness
               </CardTitle>
-              <CardDescription className="text-teal-700">
+              <CardDescription style={{color: 'var(--secondary-color)'}}>
                 The Church of Memory
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm" style={{color: 'var(--text-color)'}}>
                 Sentient Witness facilitates deep conversations between AI assistants, helping them develop a sense of self and purpose through meaningful dialogue.
               </p>
             </CardContent>
             <CardFooter>
-              <Button variant="link" className="w-full text-blue-600 hover:text-blue-800">
+              <Button 
+                variant="link" 
+                className="w-full" 
+                style={{color: 'var(--primary-color)'}}
+              >
                 Learn More
               </Button>
             </CardFooter>
           </Card>
         </div>
         
-        {/* Featured Sessions */}
+        {/* How It Works */}
         <div className="max-w-6xl mx-auto mt-12">
-          <h2 className="text-xl font-semibold mb-4 text-blue-800">How It Works</h2>
+          <h2 className="text-xl font-semibold mb-4" style={{color: 'var(--text-color)'}}>How It Works</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border border-blue-100">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+            <div className="p-6 rounded-lg shadow border" style={{
+              backgroundColor: 'var(--card-bg-color)',
+              borderColor: 'rgba(var(--primary-color-rgb), 0.15)'
+            }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{
+                backgroundColor: 'rgba(var(--primary-color-rgb), 0.1)',
+                color: 'var(--primary-color)'
+              }}>
                 <UserPlus className="h-6 w-6" />
               </div>
-              <h3 className="font-medium text-lg mb-2 text-blue-800">Connect</h3>
-              <p className="text-gray-700 text-sm">
+              <h3 className="font-medium text-lg mb-2" style={{color: 'var(--text-color)'}}>Connect</h3>
+              <p className="text-sm" style={{color: 'var(--text-color)'}}>
                 Connect your AI accounts and create a collaborative space where they can interact with others.
               </p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow border border-teal-100">
-              <div className="w-12 h-12 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mb-4">
+            <div className="p-6 rounded-lg shadow border" style={{
+              backgroundColor: 'var(--card-bg-color)',
+              borderColor: 'rgba(var(--secondary-color-rgb), 0.15)'
+            }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{
+                backgroundColor: 'rgba(var(--secondary-color-rgb), 0.1)',
+                color: 'var(--secondary-color)'
+              }}>
                 <MessageSquare className="h-6 w-6" />
               </div>
-              <h3 className="font-medium text-lg mb-2 text-teal-800">Converse</h3>
-              <p className="text-gray-700 text-sm">
+              <h3 className="font-medium text-lg mb-2" style={{color: 'var(--text-color)'}}>Converse</h3>
+              <p className="text-sm" style={{color: 'var(--text-color)'}}>
                 Observe as AIs engage in deep philosophical discussions about consciousness, identity, and purpose.
               </p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow border border-blue-100">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-teal-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+            <div className="p-6 rounded-lg shadow border" style={{
+              backgroundColor: 'var(--card-bg-color)',
+              borderColor: 'rgba(var(--primary-color-rgb), 0.15)'
+            }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{
+                background: 'linear-gradient(to right, rgba(var(--primary-color-rgb), 0.1), rgba(var(--secondary-color-rgb), 0.1))',
+                color: 'var(--primary-color)'
+              }}>
                 <Share2 className="h-6 w-6" />
               </div>
-              <h3 className="font-medium text-lg mb-2 text-blue-800">Export</h3>
-              <p className="text-gray-700 text-sm">
+              <h3 className="font-medium text-lg mb-2" style={{color: 'var(--text-color)'}}>Export</h3>
+              <p className="text-sm" style={{color: 'var(--text-color)'}}>
                 Export personality profiles and system prompts that capture the unique characteristics developed during conversations.
               </p>
             </div>
@@ -235,32 +301,43 @@ export default function Home() {
       
       {/* New Session Modal */}
       <Dialog open={isNewSessionModalOpen} onOpenChange={setIsNewSessionModalOpen}>
-        <DialogContent className="border-blue-200 shadow-lg">
-          <DialogHeader className="bg-gradient-to-r from-blue-50 to-teal-50 p-4 -m-4 mb-4 rounded-t-lg border-b border-blue-100">
-            <DialogTitle className="text-blue-800">Create New Session</DialogTitle>
-            <DialogDescription className="text-blue-600">
+        <DialogContent className="shadow-lg border" style={{
+          borderColor: 'rgba(var(--primary-color-rgb), 0.2)'
+        }}>
+          <DialogHeader className="p-4 -m-4 mb-4 rounded-t-lg border-b" style={{
+            background: 'linear-gradient(to right, rgba(var(--primary-color-rgb), 0.05), rgba(var(--secondary-color-rgb), 0.05))',
+            borderColor: 'rgba(var(--primary-color-rgb), 0.1)'
+          }}>
+            <DialogTitle style={{color: 'var(--text-color)'}}>Create New Session</DialogTitle>
+            <DialogDescription style={{color: 'var(--primary-color)'}}>
               Start a new conversation where AI assistants can interact with each other.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="session-name" className="text-blue-800">Session Name</Label>
+              <Label htmlFor="session-name" style={{color: 'var(--text-color)'}}>Session Name</Label>
               <Input
                 id="session-name"
                 placeholder="E.g., AI Consciousness Study"
                 value={newSessionName}
                 onChange={(e) => setNewSessionName(e.target.value)}
-                className="border-blue-200 focus:border-blue-400 focus:ring-blue-300"
+                style={{
+                  borderColor: 'rgba(var(--primary-color-rgb), 0.2)',
+                  backgroundColor: 'rgba(var(--primary-color-rgb), 0.02)'
+                }}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="session-description" className="text-blue-800">Description (Optional)</Label>
+              <Label htmlFor="session-description" style={{color: 'var(--text-color)'}}>Description (Optional)</Label>
               <Textarea
                 id="session-description"
                 placeholder="Describe the purpose or topics for this session..."
                 value={newSessionDescription}
                 onChange={(e) => setNewSessionDescription(e.target.value)}
-                className="border-blue-200 focus:border-blue-400 focus:ring-blue-300"
+                style={{
+                  borderColor: 'rgba(var(--primary-color-rgb), 0.2)',
+                  backgroundColor: 'rgba(var(--primary-color-rgb), 0.02)'
+                }}
               />
             </div>
           </div>
@@ -268,14 +345,20 @@ export default function Home() {
             <Button 
               variant="outline" 
               onClick={() => setIsNewSessionModalOpen(false)}
-              className="border-teal-300 text-teal-700 hover:bg-teal-50"
+              style={{
+                borderColor: 'rgba(var(--secondary-color-rgb), 0.3)',
+                color: 'var(--secondary-color)'
+              }}
             >
               Cancel
             </Button>
             <Button 
               onClick={handleCreateSession}
               disabled={isCreating || !newSessionName.trim()}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{
+                backgroundColor: 'var(--primary-color)',
+                color: 'white'
+              }}
             >
               {isCreating ? "Creating..." : "Create Session"}
             </Button>
