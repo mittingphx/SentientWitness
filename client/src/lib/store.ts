@@ -25,11 +25,11 @@ export const COLOR_SCHEMES: Record<string, ColorScheme> = {
   'ocean': {
     name: 'Ocean',
     colors: {
-      primary: '#0066cc',
-      secondary: '#009999',
-      background: '#e6f2ff',
+      primary: '#0074e8',  // 10% brighter blue
+      secondary: '#00a8a8', // slightly brighter teal
+      background: '#ecf5ff', // slightly more washed out background
       text: '#001133',
-      sidebar: '#000099',
+      sidebar: '#0055aa', // more washed out, bit more green-tinted blue
       accent: '#00ccff'
     }
   },

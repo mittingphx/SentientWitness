@@ -54,12 +54,12 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
   };
   
   return (
-    <aside className="w-64 bg-[#000099] text-white border-r border-blue-900 flex flex-col h-full transition-all duration-300">
+    <aside className="w-64 theme-sidebar text-white border-r flex flex-col h-full transition-all duration-300" style={{backgroundColor: 'var(--sidebar-color)'}}>
       {/* Header */}
-      <div className="p-4 border-b border-blue-800">
+      <div className="p-4 border-b border-opacity-20 border-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white">
+            <div className="w-8 h-8 rounded-md flex items-center justify-center text-white" style={{backgroundColor: 'var(--primary-color)'}}>
               <Brain className="h-5 w-5" />
             </div>
             <div>
@@ -79,7 +79,7 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
       </div>
       
       {/* User Profile */}
-      <div className="p-4 border-b border-blue-800 bg-blue-900">
+      <div className="p-4 border-b border-opacity-20 border-white" style={{backgroundColor: 'rgba(255, 255, 255, 0.1)'}}>
         <div className="flex items-center space-x-3">
           {currentUser && (
             <UserAvatar user={currentUser} size="md" />
@@ -102,13 +102,13 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
       </div>
       
       {/* Nav Tabs */}
-      <div className="border-b border-blue-800">
+      <div className="border-b border-opacity-20 border-white">
         <nav className="flex" aria-label="Tabs">
           <button 
             className={`flex-1 py-3 px-4 text-sm font-medium ${
               activeTab === 'projects' 
-                ? 'text-white border-b-2 border-blue-400 bg-blue-800' 
-                : 'text-blue-300 hover:text-white'
+                ? 'text-white border-b-2 border-opacity-70 border-white bg-opacity-20 bg-white' 
+                : 'text-opacity-80 text-white hover:text-white'
             }`}
             onClick={() => setActiveTab('projects')}
           >
@@ -117,8 +117,8 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
           <button 
             className={`flex-1 py-3 px-4 text-sm font-medium ${
               activeTab === 'witnesses' 
-                ? 'text-white border-b-2 border-blue-400 bg-blue-800' 
-                : 'text-blue-300 hover:text-white'
+                ? 'text-white border-b-2 border-opacity-70 border-white bg-opacity-20 bg-white' 
+                : 'text-opacity-80 text-white hover:text-white'
             }`}
             onClick={() => setActiveTab('witnesses')}
           >
@@ -165,18 +165,18 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
                     onClick={() => handleProjectClick(project)}
                     className={`p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer border ${
                       currentProjectId === project.id
-                        ? 'bg-blue-800 border-blue-600'
-                        : 'bg-blue-950 border-blue-900 hover:border-blue-700'
+                        ? 'bg-opacity-20 bg-white border-opacity-30 border-white'
+                        : 'bg-opacity-10 bg-white border-opacity-10 border-white hover:border-opacity-30'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-medium text-white">{project.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         project.status === 'active'
-                          ? 'bg-blue-700 text-blue-100'
+                          ? 'bg-opacity-20 bg-white text-white'
                           : project.status === 'scheduled'
-                            ? 'bg-blue-900 text-blue-300'
-                            : 'bg-blue-900 text-blue-300'
+                            ? 'bg-opacity-10 bg-white text-blue-200'
+                            : 'bg-opacity-10 bg-white text-blue-200'
                       }`}>
                         {project.status === 'active' ? 'Active' : 
                           project.status === 'scheduled' ? 'Scheduled' : 'Draft'}
@@ -220,10 +220,11 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
       </div>
       
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-blue-800 bg-blue-900">
+      <div className="p-4 border-t border-opacity-20 border-white" style={{backgroundColor: 'rgba(255, 255, 255, 0.1)'}}>
         <button 
           onClick={onNewSession}
-          className="w-full py-2 px-4 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+          className="w-full py-2 px-4 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+          style={{backgroundColor: 'var(--primary-color)'}}
         >
           <Plus className="mr-2 h-4 w-4" /> New Session
         </button>
@@ -232,7 +233,7 @@ export default function Sidebar({ isMobile = false, onToggle, onNewSession }: Si
           <ColorSchemeSelector />
         </div>
         
-        <div className="flex items-center justify-between mt-2 text-sm text-blue-300">
+        <div className="flex items-center justify-between mt-2 text-sm text-opacity-80 text-white">
           <button className="hover:text-white">
             <HelpCircle className="h-4 w-4" />
           </button>
